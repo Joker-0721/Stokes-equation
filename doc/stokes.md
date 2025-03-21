@@ -41,7 +41,7 @@
 
 $$
 \begin{cases} 
-\nabla \cdot \boldsymbol{\sigma} + \mathbf{b} = 0 & \text{in } \Omega \quad \text{(平衡方程)} \\
+\nabla \cdot \boldsymbol{\sigma} + \mathbf{b} = \mathbf{0} & \text{in } \Omega \quad \text{(平衡方程)} \\
 \boldsymbol{\sigma} = 2\mu\boldsymbol{\varepsilon}  - p\mathbf{1} & \text{in } \Omega \quad \text{(本构方程)} \\
 \boldsymbol{\varepsilon}  = \nabla^s \mathbf{u} & \text{in } \Omega \quad \text{(协调方程)} \\
 \nabla \cdot \mathbf{u} = 0 & \text{in } \Omega \quad \text{(不可压缩条件)}
