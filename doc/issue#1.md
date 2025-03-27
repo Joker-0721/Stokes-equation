@@ -1,6 +1,6 @@
 # Stokes方程推导
 
-**叙述**:对于两场形式（u $和$p$）强制将不可压缩约束与动量方程耦合，导致离散系统需同时满足两种矛盾的数值需求，则可能导致LBB条件不满足，压力场出现高频振荡等問題(如：相同阶数的连续速度$( \mathbf{u}) $ - 压力元$(p)$)。所以对于不可压缩牛顿流体的稳态流动可表述为 $( \mathbf{u}, \boldsymbol{\varepsilon}, \boldsymbol{\sigma}, p )$ 四场问题，四場分別對應
+**叙述**:对于两场形式（​$ \mathbf{u} $和$p$）强制将不可压缩约束与动量方程耦合，导致离散系统需同时满足两种矛盾的数值需求，则可能导致LBB条件不满足，压力场出现高频振荡等問題(如：相同阶数的连续速度$( \mathbf{u}) $ - 压力元$(p)$)。所以对于不可压缩牛顿流体的稳态流动可表述为 $( \mathbf{u}, \boldsymbol{\varepsilon}, \boldsymbol{\sigma}, p )$ 四场问题，四場分別對應
 
 * **速度场**​$( \mathbf{u}) $：流体速度分布
 * ​**应变率张量场** $(\boldsymbol{\varepsilon}) $：速度梯度的对称部分（$\boldsymbol{\varepsilon}  = \nabla^s \mathbf{u}$）
