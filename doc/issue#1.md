@@ -1,6 +1,8 @@
+
+
 # Stokes方程推导
 
-**叙述**:对于两场形式（​$ \mathbf{u} $和$p$）强制将不可压缩约束与动量方程耦合，导致离散系统需同时满足两种矛盾的数值需求，则可能导致LBB条件不满足，压力场出现高频振荡等問題(如：相同阶数的连续速度$( \mathbf{u}) $ - 压力元$(p)$)。所以对于不可压缩牛顿流体的稳态流动可表述为 $( \mathbf{u}, \boldsymbol{\varepsilon}, \boldsymbol{\sigma}, p )$ 四场问题，四場分別對應
+**叙述**:对于两场形式（$\mathbf{u} $和$p$）强制将不可压缩约束与动量方程耦合，导致离散系统需同时满足两种矛盾的数值需求，则可能导致LBB条件不满足，压力场出现高频振荡等問題。所以对于不可压缩牛顿流体的稳态流动可表述为 $( \mathbf{u}, \boldsymbol{\varepsilon}, \boldsymbol{\sigma}, p )$ ，分別對應
 
 * **速度场**​$( \mathbf{u}) $：流体速度分布
 * ​**应变率张量场** $(\boldsymbol{\varepsilon}) $：速度梯度的对称部分（$\boldsymbol{\varepsilon}  = \nabla^s \mathbf{u}$）
@@ -37,7 +39,7 @@
 
 ---
 
-## 四场问题表述
+## 问题表述
 
 $$
 \begin{cases} 
@@ -262,7 +264,7 @@ $$
 
 ---
 
-## 方程简化：四场→两场
+## 方程简化
 
 1. ​**代入本构方程到平衡方程**：
 
@@ -408,92 +410,92 @@ $$
 
 ---
 
-## 鞍点问题与离散化
+## 离散化
 
 **弱形式**：
 
 $$
 \begin{cases}
-A(\mathbf{u},\mathbf{v}) + B(p,\mathbf{v}) = f(\mathbf{v})  \\
-B(\mathbf{u},q) = 0
+ \delta L =2 \mu \int_\Omega \nabla \delta \mathbf{u} : \nabla \mathbf{u} \, d\Omega \\
+\delta L = -\int_\Omega \delta p \, (\nabla \cdot \mathbf{u}) \, d\Omega 
 \end{cases}
 $$
 
-把流體速度張量用形函數方式表示，得出：
+**速度离散**
 
 $$
-A|_{ij} = 2\mu \int \left[ \nabla N^{u}_i : \nabla N^{u}_j \right] d\Omega
+u^h_{i}(\boldsymbol{x}) = \sum_{I=1}^{n_u} N_{I}(\boldsymbol{x}) d_{iI}
 $$
 
-$$
-B|_{rj} = \int \left[ N^{p}_r \, \mathrm{div}(N^{u}_j) \right] d\Omega
-$$
+**应变率张量场**
 
 $$
-f|_{i} = \int \left[ b \cdot N^{u}_i \right] d\Omega + \int_{\Gamma} \left[ N^{u}_i \cdot t \right] d\Gamma
+\begin{split}
+\varepsilon^h_{ij} 
+&= \frac{1}{2} \left( u^h_{i,j} + u^h_{j,i} \right) \\
+&= \sum_{I=1}^{n_p} \frac{1}{2} \left( N_{I,j} d_{iI} + N_{I,i} d_{jI} \right) \\
+&= \sum_{I=1}^{n_p} \frac{1}{2} \left( N_{I,j} \delta_{ik} + N_{I,i} \delta_{jk} \right) d_{kI}
+\end{split}
 $$
 
-​簡化積分
+**代入弱形式（动量方程）**
 
 $$
-A|_{ij} = \iint 2\mu \nabla u \nabla v \, dxdy
+\begin{split}
+\int_{\Omega} 2\mu \, \delta \varepsilon^h_{ij} \varepsilon^h_{ij} \, \mathrm{d}\Omega 
+&= \sum_{I,J}^{n_p} \int_{\Omega} 2\mu \cdot \frac{1}{4} \left( N_{I,j} \delta_{ik} + N_{I,i} \delta_{jk} \right) \delta d_{kI} \left( N_{J,j} \delta_{il} + N_{J,i} \delta_{jl} \right) d_{lJ} \, \mathrm{d}\Omega \\
+&= \sum_{I,J}^{n_p} \delta d_{kI} \int_{\Omega} 2\mu \cdot \frac{1}{4} \left( N_{I,j} \delta_{ik} + N_{I,i} \delta_{jk} \right) \left( N_{J,j} \delta_{il} + N_{J,i} \delta_{jl} \right) \mathrm{d}\Omega \, d_{lJ}
+\end{split}
 $$
 
-$$
-B|_{rj} = \int p \, \mathrm{div}v \, dxdy
-$$
+**壓力離散**
 
 $$
-f|_{i} = \int b v \, dxdy + \nabla u t \, dxdy
+\begin{gathered}
+\delta p^h(\boldsymbol{x}) = \sum_{J=1}^{n_p} N_J(\boldsymbol{x}) \delta p_J \\
+u^h_i(\boldsymbol{x}) = \sum_{I=1}^{n_u} N_I(\boldsymbol{x}) d_{iI}
+\end{gathered}
 $$
 
+**散度项表达式：**
 
-- $\mathbf{N_i}$：形函數向量 ($i=1,2,3 / x,y,z$)
-- $\mathbf{t}$：邊界切向量
-- $\Gamma$：積分邊界路徑/曲面
+$$
+\nabla \cdot \mathbf{u}^h = u^h_{k,k} = \sum_{I=1}^{n_u} N_{I,k} d_{kI}
+$$
+
+**代入弱形式（连续性方程）**
+
+$$
+\int_\Omega \delta p^h (\nabla \cdot \mathbf{u}^h) \, \mathrm{d}\Omega 
+= \sum_{I,J,K=1}^{n_p} \delta p_J \left( \int_\Omega N_J N_{I,k} \, \mathrm{d}\Omega \right) d_{kI}
+$$
 
 **离散化系统**：
 
 $$
 \begin{pmatrix}
-k^{uu} & k^{up} \\
-k^{pu} & k^{pp}
+K^{uu} & K^{up} \\
+K^{pu} & K^{pp}
 \end{pmatrix}
 \begin{pmatrix}
-\mathbf{u} \\
-\mathbf{p}
+\mathbf{D^u} \\
+\mathbf{D^p}
 \end{pmatrix}
 =
 \begin{pmatrix}
 \mathbf{f} \\
-0
+\mathbf{0}
 \end{pmatrix}.
 $$
 
-- $ k^{uu} = A|_{ij}$
-- $ k^{up} = B|_{jr}$
-- $ k^{pu} = B|_{rj}$
-- $ k^{pp} = 0$
-
----
-
-## 结论
-
-1. ​**四场形式**：
-
 $$
-\begin{cases}
-\nabla \cdot \,\boldsymbol{\sigma} + \mathbf{b} = 0, \\
-\boldsymbol{\sigma} = 2\mu\,\boldsymbol{\varepsilon} - p\,\mathbf{1}, \\
-\boldsymbol{\varepsilon} = \nabla^s \mathbf{u}, \\
-\nabla \cdot \,\mathbf{u} = 0.
-\end{cases}
+K^{uu} = \sum_{I,J}^{n_p} \delta d_{kI} \int_{\Omega} 2\mu \cdot \frac{1}{4} \left( N_{I,j} \delta_{ik} + N_{I,i} \delta_{jk} \right) \left( N_{J,j} \delta_{il} + N_{J,i} \delta_{jl} \right) \mathrm{d}\Omega \, d_{lJ}
 $$
 
-2. ​**两场形式**：
-
 $$
-\nabla \cdot \,(2\mu\,\nabla^s \mathbf{u} - p\,\mathbf{1}) + \mathbf{b} = 0, \quad \nabla \cdot \,\mathbf{u} = 0.
+k^{up} = \sum_{I,J,K=1}^{n_p} \delta p_J \left( \int_\Omega N_J N_{I,k} \, \mathrm{d}\Omega \right) d_{kI}
 $$
 
-3. ​**数值实现**：通过混合有限元方法求解鞍点矩阵系统。
+$$
+k^{pp} = \mathbf{0}
+$$
