@@ -1,5 +1,3 @@
-
-
 # Stokes方程推导
 
 **叙述**:对于两场形式（$\mathbf{u} $和$p$）强制将不可压缩约束与动量方程耦合，导致离散系统需同时满足两种矛盾的数值需求，则可能导致LBB条件不满足，压力场出现高频振荡等問題。所以对于不可压缩牛顿流体的稳态流动可表述为 $( \mathbf{u}, \boldsymbol{\varepsilon}, \boldsymbol{\sigma}, p )$ ，分別對應
@@ -25,7 +23,7 @@
 1. ​**速度边界条件**​（Dirichlet条件）：
    
    $$
-   \mathbf{u} = 0 \quad \text{on } \Omega \quad
+   \mathbf{u} = \mathbf{0} \quad \text{on } \Omega \quad
    $$
    
    其中 $ \Omega  $ 为速度已知的边界（如固定壁面或入口流速）。
@@ -43,10 +41,10 @@
 
 $$
 \begin{cases} 
-\nabla \cdot \boldsymbol{\sigma} + \mathbf{b} = 0 & \text{in } \Omega \quad \text{(平衡方程)} \\
+\nabla \cdot \boldsymbol{\sigma} + \mathbf{b} = \mathbf{0} & \text{in } \Omega \quad \text{(平衡方程)} \\
 \boldsymbol{\sigma} = 2\mu\boldsymbol{\varepsilon}  - p\mathbf{1} & \text{in } \Omega \quad \text{(本构方程)} \\
-\boldsymbol{\varepsilon}  = \nabla^s \mathbf{u} & \text{in } \Omega \quad \text{(协调方程)} \\
-\nabla \cdot \mathbf{u} = 0 & \text{in } \Omega \quad \text{(不可压缩条件)}
+\boldsymbol{\varepsilon}  = \nabla^s \mathbf{u} & \text{in } \Omega \quad \text{(幾何方程)} \\
+\nabla \cdot \mathbf{u} = \mathbf{0} & \text{in } \Omega \quad \text{(不可压缩条件)}
 \end{cases}
 $$
 
@@ -57,9 +55,8 @@ $$
 - $ \boldsymbol{\varepsilon} $: 速度梯度的对称部分（应变率张量）
 - $ p $: 压力（拉格朗日乘子）/各向同性压力
 - $\mathbf{1}：\delta_{ij}$
-- $\nabla \cdot ：\frac{D\mathbf{}}{Dx}e_{i}+\frac{D\mathbf{}}{Dy}e_{j}+\frac{D\mathbf{}}{Dz}e_{z}$
-- $\nabla^s \mathbf{u} ： \dfrac{1}{2}\Bigl(\nabla \mathbf{u} + (\nabla \mathbf{u})^T\Bigr)$
-- $\nabla \mathbf{u}：\Big(\frac{D\mathbf{}}{Dx},\frac{D\mathbf{}}{Dy},\frac{D\mathbf{}}{Dz}\Big)$
+- $\nabla ：\frac{D\mathbf{}}{Dx_i}e_{i}$
+- $\nabla^s \mathbf{u} ： \dfrac{1}{2}(u_{i,j} +u_{j,i})$
 
 ---
 
@@ -81,118 +78,32 @@ $$
 
 ## 牛顿流体本构方程推导
 
-本构方程以及协调方程可以根据牛顿黏性定律（一維剪應力）推广到**應力張量** $\tau_{ij}$ 和**應變率張量** $S_{ij}$的關係，以下是推导过程
+本构方程以及协调方程可以根据牛顿黏性定律（一維剪應力）推广到**應力張量** $\sigma_{ij}$ 和**應變率張量** $\varepsilon_{ij}$的關係，以下是推导过程
 
 $$
-\begin{cases}
 F=\mu A  \frac{u}{y}\\
-\tau =\frac{F}{A}
-\end{cases}
+\sigma_{ij} =2\mu \varepsilon_{ij} - p \delta_{ij}
 $$
 
-$$
-\tau = \mu \frac{du}{dy} \tag{1}
-$$
-
-- ​$\tau$：剪應力
-- ​$\mu$：流體動力黏性係數
-- ​$\frac{du}{dy}$：速度梯度
-
-在實際流體中，應力不僅包含剪應力，還包含法向應力（正應力）。因此需將標量方程推廣到**應力張量** $\tau_{ij}$ 和**應變率張量** $S_{ij}$的關係，下標 $i= 1,2,3$ 分別對應 $x,y,z$ 方向。
+下標 $i= 1,2,3$ 分別對應 $x,y,z$ 方向。
 
 ### 應力張量
 
 $$
-\tau_{ij} = \begin{bmatrix}
-\tau_{xx} & \tau_{xy} & \tau_{xz} \\
-\tau_{yx} & \tau_{yy} & \tau_{yz} \\
-\tau_{zx} & \tau_{zy} & \tau_{zz}
+\sigma_{ij} = \begin{bmatrix}
+\sigma_{xx} & \sigma_{xy} & \sigma_{xz} \\
+\sigma_{yx} & \sigma_{yy} & \sigma_{yz} \\
+\sigma_{zx} & \sigma_{zy} & \sigma_{zz}
 \end{bmatrix}
 $$
 
 ### 應變率張量
 
 $$
-S_{ij} = \frac{1}{2} \left( \frac{\partial u_i}{\partial x_j} + \frac{\partial u_j}{\partial x_i} \right)
+\varepsilon_{ij} = \frac{1}{2} \left(u_{i,j}+u_{j,i} \right)
 $$
 
-- ($\frac{\partial u_i}{\partial x_j} + \frac{\partial u_j}{\partial x_i}$）：表示剪切變形(張量對稱部分)
-
-把 **應力張量** $\tau_{ij}$ 和**應變率張量** $S_{ij}$代入(1)，并根据笛卡尔座标中写成一般关系式
-
-$$
-\tau_{ij} = 2\mu S_{ij}\tag{2}
-$$
-
-$$
-\tau_{ij} = \sum_k \sum_\ell \mu_{ijkl} \frac{\partial u_k}{\partial x_\ell}
-$$
-
-- $\mu_{ijkl}$：速度梯度張量 $\frac{\partial u_k}{\partial x_\ell}$ 映射到黏性應力張量 $\tau_{ij}$ 的黏度張量。
-- 由於指數 $i, j, k, \ell$ 可以在 1~3 之間變化，因此總共有 ​**81 個**​「黏度係數」$\mu_{ijkl}$。
-
-假設黏度張量是各向同性的，則將 81 個係數簡化為 ​**三個獨立參數** $\alpha$、$\beta$、$\gamma$：
-
-$$
-\mu_{ijkl} = \alpha \delta_{ij} \delta_{kl} + \beta \delta_{ik} \delta_{jl} + \gamma \delta_{il} \delta_{jk}
-$$
-
-- $\delta_{ij}$：Kronecker delta 符號（單位張量）。
-- $\alpha, \beta, \gamma$：各向同性假設下的獨立黏度參數。
-
-假設流體黏性與方向無關（各向同性），應力與應變率滿足線性關係：
-
-$$
-\tau_{ij} = \alpha S_{kk} \delta_{ij} + 2\mu S_{ij} \tag{3}
-$$
-
-- $\alpha$：與體積黏性相關的係數
-- $\delta_{ij}$：Kronecker delta（單位張量）
-- $S_{kk} = S_{11} + S_{22} + S_{33}$：應變率張量的跡（體積膨脹速率）
-
-流體總應力包含靜壓力 $p$ 和黏性應力：
-
-$$
-\sigma_{ij} = -p \delta_{ij} + \tau_{ji} \tag{4}
-$$
-
-將 (3) 代入 (4)，得：
-
-$$
-\sigma_{ij} = -p \delta_{ij} + \alpha S_{kk} \delta_{ij} + 2\mu S_{ij}
-$$
-
-定義 ​**第一黏度** $\mu$（剪切黏度）和 ​**第二黏度** $\mu'$（體積黏度）：
-
-$$
-\mu' = \alpha + \frac{2}{3}\mu
-$$
-
-最終得到廣義牛頓黏性定律：
-
-$$
-\sigma_{ij} = -p \delta_{ij} + 2\mu \left( S_{ij} - \frac{1}{3} S_{kk} \delta_{ij} \right) + \mu' S_{kk} \delta_{ij} \tag{5}
-$$
-
-因為體積黏度(第二黏度)只有當流體被迅速壓縮或擴展時，如聲音和衝擊波，體積黏度顯得很重要，在流體動力學問題中通常不是必需的，不可壓縮流體滿足$\nabla \cdot \mathbf{u} = 0$ 因此不含 $\mu'$（體積黏度）。则可得到以下公式：
-
-根据：
-
-$$
-\begin{cases}
-\mathbf{1} = \delta_{ij}\\
-{\varepsilon_m}=\frac{1}{3} S_{kk}\\
-\boldsymbol{\varepsilon}={\varepsilon_{ij}} - {\varepsilon_m}\delta_{ij}\\
-\end{cases}
-$$
-
-可以得到：
-
-$$
-\sigma_{ij} =2\mu \boldsymbol{\varepsilon} -p \mathbf{1}\\
-$$
-
-- 如果$(i \neq j)$則$\sigma_{ij}$可以寫成$\tau_{ij}$
+- $\frac{1}{2} \left(u_{i,j}+u_{j,i} \right)$：表示剪切變形(張量對稱部分)
 
 ---
 
@@ -201,43 +112,25 @@ $$
 1.位移場描述相鄰兩點的位移差為：
 
 $$
-du_i = \frac{\partial u_i}{\partial x_j} dx_j
+du_i =  u_{i,j} dx_j
 $$
 
-其中 $\frac{\partial u_i}{\partial x_j}$ 為位移梯度張量。
+其中 $u_{i,j}$ 為位移梯度張量。
 
 2.位移梯度分解將位移梯度分解為對稱（應變張量）和反對稱（轉動張量）部分：
 
 $$
-\frac{\partial u_i}{\partial x_j} = e_{ij} + \omega_{ij}
+\frac{\partial u_i}{\partial x_j} = \varepsilon_{ij} + \omega_{ij}
 $$
 
 其中：
 
 $$
-e_{ij} = \frac{1}{2} \left( \frac{\partial u_i}{\partial x_j} + \frac{\partial u_j}{\partial x_i} \right), \quad \omega_{ij} = \frac{1}{2} \left( \frac{\partial u_i}{\partial x_j} - \frac{\partial u_j}{\partial x_i} \right)
-$$
-
-3.引入速度場將位移場推廣為速度場 $\boldsymbol{v}(\boldsymbol{x}, t)$，其梯度為：
-
-$$
-\frac{\partial v_i}{\partial x_j}
-$$
-
-4.對稱化速度梯度的對稱部分即為應變率張量：
-
-$$
-D_{ij} = \frac{1}{2} \left( \frac{\partial v_i}{\partial x_j} + \frac{\partial v_j}{\partial x_i} \right)
-$$
-
-- 根据牛津黏性定律可以得到应变率张量：
-
-$$
-S_{ij} = \frac{1}{2} \left( \frac{\partial u_i}{\partial x_j} + \frac{\partial u_j}{\partial x_i} \right)
+\varepsilon_{ij} = \frac{1}{2} \left( u_{i,j} + u_{j,i} \right), \quad \omega_{ij} = \frac{1}{2} \left(u_{i,j} - u_{j,i}  \right)
 $$
 
 $$
-S_{ij} = \begin{bmatrix}
+\varepsilon_{ij} = \begin{bmatrix}
 \frac{1}{2} \left( \frac{\partial u_1}{\partial x} + \frac{\partial u_1}{\partial x} \right) & 
 \frac{1}{2} \left( \frac{\partial u_1}{\partial y} + \frac{\partial u_2}{\partial x} \right)&
  \frac{1}{2} \left( \frac{\partial u_1}{\partial z} + \frac{\partial u_3}{\partial x} \right)\\
@@ -253,13 +146,7 @@ $$
 若写成矢量形式，有:
 
 $$
-{\frac{1}{2}\Bigl(\nabla \mathbf{u} + (\nabla \mathbf{u})^T\Bigr)}={\nabla^s \mathbf{u}}
-$$
-
-- 黏性应力仅与对称部分相关：
-
-$$
-\boldsymbol{\varepsilon} = \nabla^s \mathbf{u}.
+{\frac{1}{2} (u_{i,j} + u_{j,i})}={\nabla^s \mathbf{u}}
 $$
 
 ---
@@ -452,7 +339,7 @@ $$
 
 $$
 \begin{gathered}
-\delta p^h(\boldsymbol{x}) = \sum_{J=1}^{n_p} N_J(\boldsymbol{x}) \delta p_J \\
+\delta p^h(\boldsymbol{x}) = \sum_{J=1}^{n_p} \Psi_J(\boldsymbol{x}) \delta p_J \\
 u^h_i(\boldsymbol{x}) = \sum_{I=1}^{n_u} N_I(\boldsymbol{x}) d_{iI}
 \end{gathered}
 $$
@@ -466,36 +353,122 @@ $$
 **代入弱形式（连续性方程）**
 
 $$
-\int_\Omega \delta p^h (\nabla \cdot \mathbf{u}^h) \, \mathrm{d}\Omega 
-= \sum_{I,J,K=1}^{n_p} \delta p_J \left( \int_\Omega N_J N_{I,k} \, \mathrm{d}\Omega \right) d_{kI}
+\int_\Omega \delta p^h (\nabla \cdot \mathbf{u}^h) \, \mathrm{d}\Omega \mathbf{K}^{up} = \left( \int_\Omega \Psi_J N_{I,k} \, \mathrm{d}\Omega \right)
+= \sum_{I,J=1}^{n_p} \delta p_J \left( \int_\Omega N_J N_{I,k} \, \mathrm{d}\Omega \right) d_{kI}
 $$
 
 **离散化系统**：
 
 $$
-\begin{pmatrix}
-K^{uu} & K^{up} \\
-K^{pu} & K^{pp}
-\end{pmatrix}
-\begin{pmatrix}
-\mathbf{D^u} \\
-\mathbf{D^p}
-\end{pmatrix}
-=
-\begin{pmatrix}
+\mathbf{K}_{IJkl} = \int_{\Omega} 2\mu \cdot \frac{1}{4} \left( N_{I,j} \delta_{ik} + N_{I,i} \delta_{jk} \right) \left( N_{J,j} \delta_{il} + N_{J,i} \delta_{jl} \right)
+$$
+
+$$
+\mathbf{K}^{up} = \left( \int_\Omega \Psi_J N_{I,k} \, \mathrm{d}\Omega \right)
+$$
+
+$$
+\mathbf{K}^{pp} = \mathbf{0}
+
+$$
+
+
+
+
+#### Component-wise Expansion:
+
+**Case $(k,l)=(1,1)$**:
+
+$$
+\mathbf{K}_{IJ11} = \mathbf{K}[2I-1,2J-1] = \mu \int_{\Omega} \left( 2 N_{I,x} N_{J,x} + N_{I,y} N_{J,y} \right) d\Omega
+$$
+
+. ​**Case $(k,l)=(2,1)$**:
+
+$$
+\mathbf{K}_{IJ21} = \mathbf{K}[2I,2J-1] = \mu \int_{\Omega} N_{I,x} N_{J,y} \, d\Omega
+$$
+
+. ​**Case $(k,l)=(1,2)$**:
+
+$$
+\mathbf{K}_{IJ12} = \mathbf{K}[2I-1,2J] = \mu \int_{\Omega} N_{I,y} N_{J,x} \, d\Omega
+$$
+
+. ​**Case $(k,l)=(2,2)$**:
+
+$$
+\mathbf{K}_{IJ22} = \mathbf{K}[2I,2J]= \mu \int_{\Omega} \left( N_{I,x} N_{J,x} + 2 N_{I,y} N_{J,y} \right) d\Omega
+$$
+
+$$
+\begin{bmatrix}
+\delta d_{1I}\\
+\delta d_{2I}
+\end{bmatrix}
+
+\begin{bmatrix}
+k[2I-1,2J-1] & k[2I,2J-1] \\
+k[2I-1,2J] & k[2I,2J]
+\end{bmatrix}
+
+\begin{bmatrix}
+d_{1J}\\
+d_{2J}
+\end{bmatrix}
+$$
+
+. ​**Case $(k)=(1)$**:
+
+$$
+\mathbf{K}^{up} = \left( \int_\Omega N_{I,x} \Psi_J \, \mathrm{d}\Omega \right)
+$$
+
+. ​**Case $(k)=(2)$**:
+
+$$
+\mathbf{K}^{up} = \left( \int_\Omega N_{I,y}\Psi_J  \, \mathrm{d}\Omega \right)
+$$
+
+$$
+
+\begin{bmatrix}
+\delta d_{1I}\\
+\delta d_{2I}
+\end{bmatrix}
+
+\begin{bmatrix}
+k[2I-1,2J-1] \\
+k[2I-1,2J]
+\end{bmatrix}
+
+\begin{bmatrix}
+d_{1J}\\
+d_{2J}
+\end{bmatrix}
+
+$$
+
+$$
+
+\begin{bmatrix}
+\mathbf{K}^{uu} & \mathbf{K}^{up} \\
+(\mathbf{K}^{up})^{T} & \mathbf{K}^{pp}
+\end{bmatrix}
+\left\{
+\begin{matrix}
+\mathbf{d}^u \\
+\mathbf{d}^p
+\end{matrix}
+\right\}=
+\left\{
+\begin{matrix}
 \mathbf{f} \\
 \mathbf{0}
-\end{pmatrix}.
+\end{matrix}
+\right\}
+
 $$
 
 $$
-K^{uu} = \sum_{I,J}^{n_p} \delta d_{kI} \int_{\Omega} 2\mu \cdot \frac{1}{4} \left( N_{I,j} \delta_{ik} + N_{I,i} \delta_{jk} \right) \left( N_{J,j} \delta_{il} + N_{J,i} \delta_{jl} \right) \mathrm{d}\Omega \, d_{lJ}
-$$
 
-$$
-k^{up} = \sum_{I,J,K=1}^{n_p} \delta p_J \left( \int_\Omega N_J N_{I,k} \, \mathrm{d}\Omega \right) d_{kI}
-$$
-
-$$
-k^{pp} = \mathbf{0}
-$$
