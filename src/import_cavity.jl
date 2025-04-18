@@ -25,7 +25,7 @@ function import_cavity_fem(filename::String)
     return elements, nodes
 end
 
-function import_patch_test_quad_RI(filename1::String,filename2::String)
+function import_cavity_RI(filename1::String,filename2::String)
     gmsh.initialize()
     gmsh.open(filename1)
 
@@ -42,7 +42,7 @@ function import_patch_test_quad_RI(filename1::String,filename2::String)
     elements["Γ₁"] = getElements(nodes, entities["Γ₁"], integrationOrder,normal=true)
     elements["Γ₂"] = getElements(nodes, entities["Γ₂"], integrationOrder,normal=true)
     elements["Γ₃"] = getElements(nodes, entities["Γ₃"], integrationOrder,normal=true)
-    # elements["Γ₄"] = getElements(nodes, entities["Γ₄"], integrationOrder,normal=true)
+    elements["Γ₄"] = getElements(nodes, entities["Γ₄"], integrationOrder,normal=true)
 
     gmsh.open(filename2)
     integrationOrder_Ωˢ = 0
@@ -55,7 +55,7 @@ function import_patch_test_quad_RI(filename1::String,filename2::String)
     return elements, nodes, nodes_s
 end
 
-function import_patch_test_mix(filename1::String,filename2::String)
+function import_cavity_test(filename1::String,filename2::String)
     gmsh.initialize()
     gmsh.open(filename1)
 
@@ -73,7 +73,7 @@ function import_patch_test_mix(filename1::String,filename2::String)
     elements["Γ₁"] = getElements(nodes, entities["Γ₁"], integrationOrder,normal=true)
     elements["Γ₂"] = getElements(nodes, entities["Γ₂"], integrationOrder,normal=true)
     elements["Γ₃"] = getElements(nodes, entities["Γ₃"], integrationOrder,normal=true)
-    # elements["Γ₄"] = getElements(nodes, entities["Γ₄"], integrationOrder,normal=true)
+    elements["Γ₄"] = getElements(nodes, entities["Γ₄"], integrationOrder,normal=true)
 
     gmsh.open(filename2)
     entities = getPhysicalGroups()

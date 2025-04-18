@@ -1,171 +1,218 @@
-using ApproxOperator, XLSX
-
+using ApproxOperator, JLD, XLSX, Printf
+using CairoMakie
+using SparseArrays
 import BenchmarkExample: BenchmarkExample
-
 include("import_cavity.jl")
-ndiv = 16
-elements, nodes = import_patch_test_fem("msh/patchtest_"*string(ndiv)*".msh");
-# elements, nodes = import_patch_test_fem("msh/patchtest_quad_"*string(ndiv)*".msh");
-# elements, nodes = import_patch_test_fem("msh/square_quad8_8.msh");
+# ndiv   = 4
+# ndivs  = 4
+# ndivs2 = 16
 
-nₚ = length(nodes)
+elements, nodes, nodes_s, Ω, sp, type = import_cavity_RI("msh/cavity_final.msh","msh/cavity_final.msh");
+# elements, nodes, nodes_s, Ω, sp, type = import_SquarePlate_mix("msh/SquarePlate/SquarePlate_"*string(ndiv)*".msh","msh/SquarePlate/SquarePlate_q_"*string(ndivs)*".msh");
+# elements, nodes, nodes_s, Ω, sp, type = import_SquarePlate_mix("msh/SquarePlate/SquarePlate_"*string(ndiv)*".msh","msh/SquarePlate/SquarePlate_"*string(ndivs)*"_"*string(ndivs2)*".msh");
+# elements, nodes, nodes_s, Ω, sp, type = import_SquarePlate_mix("msh/SquarePlate/SquarePlate_quad_"*string(ndiv)*".msh","msh/SquarePlate/SquarePlate_quad_"*string(ndivs)*".msh");
+# elements, nodes, nodes_s, Ω, sp, type = import_SquarePlate_mix("msh/SquarePlate/SquarePlate_quad_"*string(ndiv)*".msh","msh/SquarePlate/SquarePlate_quad_q_"*string(ndivs)*".msh");
+# elements, nodes, nodes_s, Ω, sp, type = import_SquarePlate_mix("msh/SquarePlate/SquarePlate_quad_"*string(ndiv)*".msh","msh/SquarePlate/SquarePlate_quad_"*string(ndivs)*"_"*string(ndivs2)*".msh");
+# elements, nodes, nodes_s, Ω, sp, type = import_SquarePlate_mix("msh/SquarePlate/SquarePlate_tri6_"*string(ndiv)*".msh","msh/SquarePlate/SquarePlate_tri6_"*string(ndivs)*".msh");
+# elements, nodes, nodes_s, Ω, sp, type = import_SquarePlate_mix("msh/SquarePlate/SquarePlate_tri6_"*string(ndiv)*".msh","msh/SquarePlate/SquarePlate_tri6_q_"*string(ndivs)*".msh");
+# elements, nodes, nodes_s, Ω, sp, type = import_SquarePlate_mix("msh/SquarePlate/SquarePlate_tri6_"*string(ndiv)*".msh","msh/SquarePlate/SquarePlate_tri6_"*string(ndivs)*"_"*string(ndivs2)*".msh");
+# elements, nodes, nodes_s, Ω, sp, type = import_SquarePlate_mix("msh/SquarePlate/SquarePlate_quad8_"*string(ndiv)*".msh","msh/SquarePlate/SquarePlate_quad8_"*string(ndivs)*".msh");
+# elements, nodes, nodes_s, Ω, sp, type = import_SquarePlate_mix("msh/SquarePlate/SquarePlate_quad8_"*string(ndiv)*".msh","msh/SquarePlate/SquarePlate_quad8_q_"*string(ndivs)*".msh");
+# elements, nodes, nodes_s, Ω, sp, type = import_SquarePlate_mix("msh/SquarePlate/SquarePlate_quad8_"*string(ndiv)*".msh","msh/SquarePlate/SquarePlate_quad8_"*string(ndivs)*"_"*string(ndivs2)*".msh");
 
-E = 1;
-ν = 0.3;
-h = 1
-Dᵇ = E*h^3/12/(1-ν^2)
-Dˢ = 5/6*E*h/(2*(1+ν))
+nᵇ = length(nodes)
+nˢ = length(nodes_s)
+nₑ = length(elements["Ω"])
+nₑₛ = length(Ω)
+E = 1
+ν = 1
+# h = 1
+# L = 1.0
+# ps = MKLPardisoSolver()
 
-# w(x,y) = -Dᵇ/Dˢ*8*x-Dᵇ/Dˢ*8*y+x^3+y^3+x^2*y+x*y^2
-# w₁(x,y) = -Dᵇ/Dˢ*8+3*x^2+2*x*y+y^2
-# w₂(x,y) = -Dᵇ/Dˢ*8+3*y^2+x^2+2*x*y
-# w₁₁(x,y) = 6*x+2*y
-# w₂₂(x,y) = 2*x+6*y
-# θ₁(x,y) = 3*x^2+2*x*y+y^2
-# θ₂(x,y) = 3*y^2+x^2+2*x*y
-# θ₁₁(x,y) = 6*x+2*y
-# θ₁₂(x,y) = 2*x+2*y
-# θ₂₂(x,y) = 2*x+6*y
+# Dᵇ = E*h^3/12/(1-ν^2)
+# Dˢ = 5/6*E*h/(2*(1+ν))
+# w(x,y) = 1/3*x^3*(x-1)^3*y^3*(y-1)^3-2*h^2/(5*(1-ν))*(y^3*(y-1)^3*x*(x-1)*(5*x^2-5*x+1)+x^3*(x-1)^3*y*(y-1)*(5*y^2-5*y+1))
+# θ₁(x,y) = y^3*(y-1)^3*x^2*(x-1)^2*(2*x-1)
+# θ₂(x,y) = x^3*(x-1)^3*y^2*(y-1)^2*(2*y-1)
+# F(x,y) = E*h^3/(12*(1-ν^2))*(12*y*(y-1)*(5*x^2-5*x+1)*(2*y^2*(y-1)^2+x*(x-1)*(5*y^2-5*y+1))+12*x*(x-1)*(5*y^2-5*y+1)*(2*x^2*(x-1)^2+y*(y-1)*(5*x^2-5*x+1)))
 
-# w(x,y) = x+y+x^2/2+x*y+y^2/2
-# w₁(x,y) = 1+x+y
-# w₂(x,y) = 1+x+y
-# w₁₁(x,y) = 1
-# w₂₂(x,y) = 1
-# θ₁(x,y) = 1+x+y
-# θ₂(x,y) = 1+x+y
-# θ₁₁(x,y)  = 1
-# θ₁₂(x,y)  = 1
-# θ₂₂(x,y)  = 1
-
-w(x,y) = 1+x+y
-w₁(x,y) = 1
-w₂(x,y) = 1
-w₁₁(x,y) = 0
-w₂₂(x,y) = 0
-θ₁(x,y) = 1+x+y
-θ₂(x,y) = 1+x+y
-θ₁₁(x,y)  = 1
-θ₁₂(x,y)  = 1
-θ₂₂(x,y)  = 1
-
-# n = 1
-# w(x,y) = (x+y)^n
-# w₁(x,y) = n*(x+y)^abs(n-1)
-# w₂(x,y) = n*(x+y)^abs(n-1)
-# w₁₁(x,y) = n*(n-1)*(x+y)^abs(n-2)
-# w₂₂(x,y) = n*(n-1)*(x+y)^abs(n-2)
-# m = 0
-# θ₁(x,y) = (x+y)^m
-# θ₂(x,y) = (x+y)^m
-# θ₁₁(x,y)  = m*(x+y)^abs(m-1)
-# θ₁₂(x,y)  = m*(x+y)^abs(m-1)
-# θ₂₂(x,y)  = m*(x+y)^abs(m-1)
-# θ₁₁₁(x,y) = m*(m-1)*(x+y)^abs(m-2)
-# θ₁₁₂(x,y) = m*(m-1)*(x+y)^abs(m-2)
-# θ₁₂₂(x,y) = m*(m-1)*(x+y)^abs(m-2)
-# θ₁₂₁(x,y) = m*(m-1)*(x+y)^abs(m-2)
-# θ₂₂₂(x,y) = m*(m-1)*(x+y)^abs(m-2)
-# θ₂₂₁(x,y) = m*(m-1)*(x+y)^abs(m-2)
-
-M₁₁(x,y)= -Dᵇ*(θ₁₁(x,y)+ν*θ₂₂(x,y))
-M₁₂(x,y)= -Dᵇ*(1-ν)*θ₁₂(x,y)
-M₂₂(x,y)= -Dᵇ*(ν*θ₁₁(x,y)+θ₂₂(x,y))
-M₁₁₁(x,y)= -Dᵇ*(θ₁₁₁(x,y)+ν*θ₂₂₁(x,y))
-M₁₂₂(x,y)= -Dᵇ*(1-ν)*θ₁₂₂(x,y)
-M₁₂₁(x,y)= -Dᵇ*(1-ν)*θ₁₂₁(x,y)
-M₂₂₂(x,y)= -Dᵇ*(ν*θ₁₁₂(x,y)+θ₂₂₂(x,y))
-
-Q₁(x,y) = Dˢ*(w₁(x,y)-θ₁(x,y))
-Q₂(x,y) = Dˢ*(w₂(x,y)-θ₂(x,y))
-Q₁₁(x,y) = Dˢ*(w₁₁(x,y)-θ₁₁(x,y))
-Q₂₂(x,y) = Dˢ*(w₂₂(x,y)-θ₂₂(x,y))
-
-eval(prescribeForFem)
-
-set𝝭!(elements["Ω"])
-set∇𝝭!(elements["Ω"])
-set𝝭!(elements["Γ₁"])
-set𝝭!(elements["Γ₂"])
-set𝝭!(elements["Γ₃"])
-set𝝭!(elements["Γ₄"])
+# w₁(x,y) = (x-1)^2*x^2*(2*x-1)*(y-1)^3*y^3-2*h^2/(5*(1-ν))*((20*x^3-30*x^2+12*x-1)*(y-1)^3*y^3+3*(x-1)^2*x^2*(2*x-1)*(y-1)*y*(5*y^2-5*y+1))
+# w₂(x,y) = (x-1)^3*x^3*(y-1)^2*y^2*(2*y-1)-2*h^2/(5*(1-ν))*(3*(x-1)*x*(5*x^2-5*x+1)*(y-1)^2*y^2*(2*y-1)+x^3*(x-1)^3*(20*y^3-30*y^2+12*y-1))
+# θ₁₁(x,y) = 2*(x-1)*x*(5*x^2-5*x+1)*(y-1)^3*y^3
+# θ₁₂(x,y) = 3*(x-1)^2*x^2*(2*x-1)*(y-1)^2*y^2*(2*y-1)
+# θ₂₂(x,y) = 2*(x-1)^3*x^3*(y-1)*y*(5*y^2-5*y+1)
+# M₁₁(x,y)= -Dᵇ*(θ₁₁(x,y)+ν*θ₂₂(x,y))
+# M₁₂(x,y)= -Dᵇ*(1-ν)*θ₁₂(x,y)
+# M₂₂(x,y)= -Dᵇ*(ν*θ₁₁(x,y)+θ₂₂(x,y))
+# Q₁(x,y) = Dˢ*(w₁(x,y)-θ₁(x,y))
+# Q₂(x,y) = Dˢ*(w₂(x,y)-θ₂(x,y))
+# eval(prescribeForSSNonUniformLoading)
+# eval(prescribeForSimpleSupported)
+# eval(prescribeForCantilever)
+# set𝝭!(elements["Ω"])
+# set∇𝝭!(elements["Ω"])
+set𝝭!(elements["Ωˢ"])
+set∇𝝭!(elements["Ωˢ"])
+set𝝭!(elements["Γᵇ"])
+set𝝭!(elements["Γᵗ"])
+set𝝭!(elements["Γˡ"])
+set𝝭!(elements["Γʳ"])
 
 ops = [
-    Operator{:∫κMγQdΩ}(:E=>E,:ν=>ν,:h=>h),
     Operator{:∫κMdΩ}(:E=>E,:ν=>ν,:h=>h),
-    Operator{:∫γQdΩ}(:E=>E,:ν=>ν,:h=>h),
+    Operator{:∫wQdΩ}(),
+    Operator{:∫QQdΩ}(:E=>E,:ν=>ν,:h=>h),
     Operator{:∫wqdΩ}(),
-    Operator{:∫∇MQdΩ}(),
     Operator{:∫vwdΓ}(:α=>1e13*E),
-    Operator{:∫vθdΓ}(:α=>1e13*E),
+    Operator{:∫vθ₁dΓ}(:α=>1e13*E),
+    Operator{:∫vθ₂dΓ}(:α=>1e13*E),
+    Operator{:L₂_ThickPlate}(:E=>E,:ν=>ν),
+    Operator{:L₂_ThickPlate_Q}(:E=>E,:ν=>ν),
+    Operator{:∫θM₁dΓ}(),
+    Operator{:∫θM₂dΓ}(),
     Operator{:∫wVdΓ}(),
-    Operator{:∫θMdΓ}(),
-    Operator{:L₂}(:E=>E,:ν=>ν),
-    Operator{:H₁}(:E=>E,:ν=>ν),
 ]
-k = zeros(3*nₚ,3*nₚ)
-kᵇ = zeros(3*nₚ,3*nₚ)
-kˢ = zeros(3*nₚ,3*nₚ)
-f = zeros(3*nₚ)
-# ops[1](elements["Ω"],k)
-ops[2](elements["Ω"],kᵇ)
-ops[3](elements["Ω"],kˢ)
+kᵇ = zeros(2*nᵇ,2*nᵇ)
+kʷˢ = zeros(2*nᵇ,1*nˢ)
+kˢˢ = zeros(2*nˢ,2*nˢ)
+f = zeros(3*nᵇ)
+# d = zeros(3*nᵇ+2*nˢ)
+
+ops[1](elements["Ω"],kᵇ)
+ops[2](elements["Ω"],elements["Ωˢ"],kʷˢ)
+ops[3](elements["Ωˢ"],kˢˢ)
 ops[4](elements["Ω"],f)
-# ops[5](elements["Ω"],f)
-ops[6](elements["Γ₁"],k,f)
-ops[6](elements["Γ₂"],k,f)
-ops[6](elements["Γ₃"],k,f)
-ops[6](elements["Γ₄"],k,f)
-ops[7](elements["Γ₁"],k,f)
-ops[7](elements["Γ₂"],k,f)
-ops[7](elements["Γ₃"],k,f)
-ops[7](elements["Γ₄"],k,f)
-# ops[8](elements["Γ₁"],f)
-# ops[8](elements["Γ₂"],f)
-# ops[8](elements["Γ₃"],f)
-# ops[8](elements["Γ₄"],f)
-# ops[9](elements["Γ₁"],f)
-# ops[9](elements["Γ₂"],f)
-# ops[9](elements["Γ₃"],f)
-# ops[9](elements["Γ₄"],f)
+ops[5](elements["Γᵇ"],kᵇ,f)
+ops[5](elements["Γᵗ"],kᵇ,f)
+ops[5](elements["Γˡ"],kᵇ,f)
+ops[5](elements["Γʳ"],kᵇ,f)
+ops[6](elements["Γᵇ"],kᵇ,f)
+ops[6](elements["Γᵗ"],kᵇ,f)
+ops[6](elements["Γˡ"],kᵇ,f)
+ops[6](elements["Γʳ"],kᵇ,f)
+ops[7](elements["Γᵇ"],kᵇ,f)
+ops[7](elements["Γᵗ"],kᵇ,f)
+ops[7](elements["Γˡ"],kᵇ,f)
+ops[7](elements["Γʳ"],kᵇ,f)
+# ops[9](elements["Γᵇ"],f)
+# ops[9](elements["Γᵗ"],f)
+# ops[9](elements["Γˡ"],f)
+# ops[9](elements["Γʳ"],f)
+# ops[10](elements["Γᵇ"],f)
+# ops[10](elements["Γᵗ"],f)
+# ops[10](elements["Γˡ"],f)
+# ops[10](elements["Γʳ"],f)
+# ops[11](elements["Γᵇ"],f) 
+# ops[11](elements["Γᵗ"],f)
+# ops[11](elements["Γˡ"],f)
+# ops[11](elements["Γʳ"],f)
 
-d = (kᵇ+kˢ+k)\f
-# a = eigvals(kˢ,kᵇ+k)
+k = [kᵇ kʷˢ;kʷˢ' kˢˢ]
+# k = sparse([kᵇ kʷˢ;kʷˢ' kˢˢ])
+f = [f;zeros(2*nˢ)]
 
-d₁ = d[1:3:3*nₚ]
-d₂ = d[2:3:3*nₚ]
-d₃ = d[3:3:3*nₚ]
+# k = kʷˢ*inv(kˢˢ)*kʷˢ'
+# k = -kʷˢ*(kˢˢ\kʷˢ')
+# a = eigvals(k)
+# println(log10(a[3*nᵇ-2nˢ+1]))
+# println(a[3*nᵇ-2nˢ+1])
 
-push!(nodes,:d=>d₁)
-# push!(nodes,:d=>d₂)
-# push!(nodes,:d=>d₃)
+d = k\f
+# pardiso(ps,d,k,f)
+d₁ = d[1:3:3*nᵇ]
+d₂ = d[2:3:3*nᵇ] 
+d₃ = d[3:3:3*nᵇ]
+s₁ = d[3*nᵇ+1:2:3*nᵇ+2*nˢ]
+s₂ = d[3*nᵇ+2:2:3*nᵇ+2*nˢ]
+
+push!(nodes,:d₁=>d₁,:d₂=>d₂,:d₃=>d₃)
+push!(nodes_s,:q₁=>s₁,:q₂=>s₂)
+# eval(VTK_mix_pressure)
 
 set𝝭!(elements["Ωᵍ"])
 set∇𝝭!(elements["Ωᵍ"])
+set𝝭!(elements["Ωᵍˢ"])
+set∇𝝭!(elements["Ωᵍˢ"])
+
 prescribe!(elements["Ωᵍ"],:u=>(x,y,z)->w(x,y))
-L₂ = ops[10](elements["Ωᵍ"])
-a = log10(L₂)
+prescribe!(elements["Ωᵍ"],:θ₁=>(x,y,z)->θ₁(x,y))
+prescribe!(elements["Ωᵍ"],:θ₂=>(x,y,z)->θ₂(x,y))
+prescribe!(elements["Ωᵍˢ"],:Q₁=>(x,y,z)->Q₁(x,y))
+prescribe!(elements["Ωᵍˢ"],:Q₂=>(x,y,z)->Q₂(x,y))
+L₂_u = ops[8](elements["Ωᵍ"])
+L₂_q = ops[9](elements["Ωᵍˢ"])
+a = log10(L₂_u)
+b = log10(L₂_q)
+println(a)
+println(b)
+# index = 1:20
+# XLSX.openxlsx("./xlsx/SquarePlate.xlsx", mode="rw") do xf
+#     Sheet = xf[6]
+#     ind = findfirst(n->n==ndivs,index)+2
+#     Sheet["J"*string(ind)] = nˢ
+#     Sheet["K"*string(ind)] = a
+#     Sheet["L"*string(ind)] = b
+# end
+
+# println(wᶜ)
+# e = abs(wᶜ[1]-𝑣)
+
 # index = [8,16,32,64]
-# XLSX.openxlsx("./xlsx/patch_test.xlsx", mode="rw") do xf
-#     Sheet = xf[5]
+# XLSX.openxlsx("./xlsx/SquarePlate.xlsx", mode="rw") do xf
+#     Sheet = xf[3]
 #     ind = findfirst(n->n==ndiv,index)+1
-#     Sheet["F"*string(ind)] = log10(1/ndiv)
-#     Sheet["G"*string(ind)] = L₂
-#     Sheet["H"*string(ind)] = log10(L₂)
+#     Sheet["B"*string(ind)] = log10(1/ndiv)
+#     Sheet["C"*string(ind)] = a
 # end
 
-# d = zeros(3*nₚ)
-# for (i,node) in enumerate(nodes)
-#     x = node.x
-#     y = node.y
-#     z = node.z
+fig = Figure()
+ind = 100
+ax = Axis(fig[1,1], 
+    aspect = DataAspect(), 
+    xticksvisible = false,
+    xticklabelsvisible=false, 
+    yticksvisible = false, 
+    yticklabelsvisible=false,
+)
+hidespines!(ax)
+hidedecorations!(ax)
+xs = LinRange(0, 1, ind)
+ys = LinRange(0, 1, ind)
+zs = zeros(ind,ind)
+𝗠 = zeros(21)
+# s = 2.1/(ndivs)*ones(length(nodes_s))
+# push!(nodes_s,:s₁=>s,:s₂=>s,:s₃=>s)
+for (i,x) in enumerate(xs)
+    for (j,y) in enumerate(ys)
+        indices = sp(x,y,0.0)
+        ni = length(indices)
+        𝓒 = [nodes_s[i] for i in indices]
+        data = Dict([:x=>(2,[x]),:y=>(2,[y]),:z=>(2,[0.0]),:𝝭=>(4,zeros(ni)),:𝗠=>(0,𝗠)])
+        ξ = 𝑿ₛ((𝑔=1,𝐺=1,𝐶=1,𝑠=0), data)
+        𝓖 = [ξ]
+        a = type(𝓒,𝓖)
+        set𝝭!(a)
+        q = 0.0
+        N = ξ[:𝝭]
+        for (k,xₖ) in enumerate(𝓒)
+            q += N[k]*xₖ.q₁
+            # q += N[k]*xₖ.q₂
+        end
+        zs[i,j] = q
+    end
+ end
+surface!(xs,ys,zeros(ind,ind),color=zs,colorrange=(-0.000025,0.000025),colormap=:lightrainbow)
+contour!(xs,ys,zs,levels=-0.000025:0.00000715:0.000025,color=:azure)
+# Colorbar(fig[1,2], limits=(-0.000025,0.000025), colormap=:lightrainbow)
+# save("./png/SquarePlate_mix_tri3_q1_"*string(ndiv)*"_"*string(ndivs)*".png",fig, px_per_unit = 3.0)
+# save("./png/SquarePlate_mix_tri3_q2_"*string(ndiv)*"_"*string(ndivs)*".png",fig, px_per_unit = 10.0)
+save("./png/SquarePlate_mix_tri6_q1_"*string(ndiv)*"_"*string(ndivs)*".png",fig, px_per_unit = 3.0)
+# save("./png/SquarePlate_mix_colorbar.png",fig, px_per_unit = 10.0)
+# save("./png/SquarePlate_mix_tri6_q2_"*string(ndiv)*"_"*string(ndivs)*".png",fig, px_per_unit = 10.0)
+# save("./png/SquarePlate_mix_quad4_q1_"*string(ndiv)*"_"*string(ndivs)*".png",fig, px_per_unit = 3.0)
+# save("./png/SquarePlate_mix_quad4_q2_"*string(ndiv)*"_"*string(ndivs)*".png",fig, px_per_unit = 10.0)
+# save("./png/SquarePlate_mix_quad8_q1_"*string(ndiv)*"_"*string(ndivs)*".png",fig, px_per_unit = 3.0)
+# save("./png/SquarePlate_mix_quad8_q2_"*string(ndiv)*"_"*string(ndivs)*".png",fig, px_per_unit = 10.0)
 
-#     d[3*i-2] = w(x,y)
-#     d[3*i-1] = θ₁(x,y)
-#     d[3*i] = θ₂(x,y)
-# end
-
-# k
-# kᵇ*d - f
-# kˢ*d - f
-# err1 = kᵇ*d
+fig
