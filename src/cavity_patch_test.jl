@@ -1,4 +1,4 @@
-using ApproxOperator, JLD, XLSX, Printf
+using ApproxOperator, XLSX
 using CairoMakie
 using SparseArrays
 import BenchmarkExample: BenchmarkExample
@@ -20,12 +20,13 @@ elements, nodes, nodes_s, Ω, sp, type = import_cavity_RI("msh/cavity_final.msh"
 # elements, nodes, nodes_s, Ω, sp, type = import_SquarePlate_mix("msh/SquarePlate/SquarePlate_quad8_"*string(ndiv)*".msh","msh/SquarePlate/SquarePlate_quad8_q_"*string(ndivs)*".msh");
 # elements, nodes, nodes_s, Ω, sp, type = import_SquarePlate_mix("msh/SquarePlate/SquarePlate_quad8_"*string(ndiv)*".msh","msh/SquarePlate/SquarePlate_quad8_"*string(ndivs)*"_"*string(ndivs2)*".msh");
 
-nᵇ = length(nodes)
-nˢ = length(nodes_s)
+nᵘ = length(nodes)
+nᵖ = length(nodes_s)
 nₑ = length(elements["Ω"])
 nₑₛ = length(Ω)
 E = 1
 ν = 1
+μ = 1
 # h = 1
 # L = 1.0
 # ps = MKLPardisoSolver()
@@ -50,51 +51,51 @@ E = 1
 # eval(prescribeForSSNonUniformLoading)
 # eval(prescribeForSimpleSupported)
 # eval(prescribeForCantilever)
-# set𝝭!(elements["Ω"])
-# set∇𝝭!(elements["Ω"])
-set𝝭!(elements["Ωˢ"])
-set∇𝝭!(elements["Ωˢ"])
+set𝝭!(elements["Ω"])
+set∇𝝭!(elements["Ω"])
+# set𝝭!(elements["Ωˢ"])
+# set∇𝝭!(elements["Ωˢ"])
 set𝝭!(elements["Γᵇ"])
 set𝝭!(elements["Γᵗ"])
 set𝝭!(elements["Γˡ"])
 set𝝭!(elements["Γʳ"])
 
 ops = [
-    Operator{:∫κMdΩ}(:E=>E,:ν=>ν,:h=>h),
-    Operator{:∫wQdΩ}(),
-    Operator{:∫QQdΩ}(:E=>E,:ν=>ν,:h=>h),
-    Operator{:∫wqdΩ}(),
-    Operator{:∫vwdΓ}(:α=>1e13*E),
-    Operator{:∫vθ₁dΓ}(:α=>1e13*E),
-    Operator{:∫vθ₂dΓ}(:α=>1e13*E),
-    Operator{:L₂_ThickPlate}(:E=>E,:ν=>ν),
-    Operator{:L₂_ThickPlate_Q}(:E=>E,:ν=>ν),
-    Operator{:∫θM₁dΓ}(),
-    Operator{:∫θM₂dΓ}(),
-    Operator{:∫wVdΓ}(),
+    Operator{:∫∫μ∇u∇vdxdy}(:μ=>μ),
+    Operator{:∫pdivvdxdy}(),
+    Operator{:∫bvdxdy}(),
+    # Operator{:∫wqdΩ}(),
+    # Operator{:∫vwdΓ}(:α=>1e13*E),
+    # Operator{:∫vθ₁dΓ}(:α=>1e13*E),
+    # Operator{:∫vθ₂dΓ}(:α=>1e13*E),
+    # Operator{:L₂_ThickPlate}(:E=>E,:ν=>ν),
+    # Operator{:L₂_ThickPlate_Q}(:E=>E,:ν=>ν),
+    # Operator{:∫θM₁dΓ}(),
+    # Operator{:∫θM₂dΓ}(),
+    # Operator{:∫wVdΓ}(),
 ]
-kᵇ = zeros(2*nᵇ,2*nᵇ)
-kʷˢ = zeros(2*nᵇ,1*nˢ)
-kˢˢ = zeros(2*nˢ,2*nˢ)
-f = zeros(3*nᵇ)
+kᵘ = zeros(2*nᵘ,2*nᵘ)
+kᵘᵖ = zeros(2*nᵘ,1*nᵖ)
+kᵖ = zeros(1*nᵖ,1*nᵖ)
+f = zeros(2*nᵘ)
 # d = zeros(3*nᵇ+2*nˢ)
 
-ops[1](elements["Ω"],kᵇ)
-ops[2](elements["Ω"],elements["Ωˢ"],kʷˢ)
-ops[3](elements["Ωˢ"],kˢˢ)
+ops[1](elements["Ω"],kᵘ)
+ops[2](elements["Ω"],elements["Ωˢ"],kᵘᵖ)
+# ops[3](elements["Ωˢ"],kˢˢ)
 ops[4](elements["Ω"],f)
-ops[5](elements["Γᵇ"],kᵇ,f)
-ops[5](elements["Γᵗ"],kᵇ,f)
-ops[5](elements["Γˡ"],kᵇ,f)
-ops[5](elements["Γʳ"],kᵇ,f)
-ops[6](elements["Γᵇ"],kᵇ,f)
-ops[6](elements["Γᵗ"],kᵇ,f)
-ops[6](elements["Γˡ"],kᵇ,f)
-ops[6](elements["Γʳ"],kᵇ,f)
-ops[7](elements["Γᵇ"],kᵇ,f)
-ops[7](elements["Γᵗ"],kᵇ,f)
-ops[7](elements["Γˡ"],kᵇ,f)
-ops[7](elements["Γʳ"],kᵇ,f)
+ops[5](elements["Γᵇ"],kᵘ,f)
+ops[5](elements["Γᵗ"],kᵘ,f)
+ops[5](elements["Γˡ"],kᵘ,f)
+ops[5](elements["Γʳ"],kᵘ,f)
+ops[6](elements["Γᵇ"],kᵘ,f)
+ops[6](elements["Γᵗ"],kᵘ,f)
+ops[6](elements["Γˡ"],kᵘ,f)
+ops[6](elements["Γʳ"],kᵘ,f)
+ops[7](elements["Γᵇ"],kᵘ,f)
+ops[7](elements["Γᵗ"],kᵘ,f)
+ops[7](elements["Γˡ"],kᵘ,f)
+ops[7](elements["Γʳ"],kᵘ,f)
 # ops[9](elements["Γᵇ"],f)
 # ops[9](elements["Γᵗ"],f)
 # ops[9](elements["Γˡ"],f)
@@ -108,9 +109,9 @@ ops[7](elements["Γʳ"],kᵇ,f)
 # ops[11](elements["Γˡ"],f)
 # ops[11](elements["Γʳ"],f)
 
-k = [kᵇ kʷˢ;kʷˢ' kˢˢ]
+k = [kᵘ kᵘᵖ;kᵘᵖ' kᵖ]
 # k = sparse([kᵇ kʷˢ;kʷˢ' kˢˢ])
-f = [f;zeros(2*nˢ)]
+f = [f;zeros(2*nᵘ)]
 
 # k = kʷˢ*inv(kˢˢ)*kʷˢ'
 # k = -kʷˢ*(kˢˢ\kʷˢ')
@@ -120,11 +121,11 @@ f = [f;zeros(2*nˢ)]
 
 d = k\f
 # pardiso(ps,d,k,f)
-d₁ = d[1:3:3*nᵇ]
-d₂ = d[2:3:3*nᵇ] 
-d₃ = d[3:3:3*nᵇ]
+d₁ = d[1:3:3*nᵘ]
+d₂ = d[2:3:3*nᵘ] 
+# d₃ = d[3:3:3*nᵇ]
 s₁ = d[3*nᵇ+1:2:3*nᵇ+2*nˢ]
-s₂ = d[3*nᵇ+2:2:3*nᵇ+2*nˢ]
+# s₂ = d[3*nᵇ+2:2:3*nᵇ+2*nˢ]
 
 push!(nodes,:d₁=>d₁,:d₂=>d₂,:d₃=>d₃)
 push!(nodes_s,:q₁=>s₁,:q₂=>s₂)
@@ -166,53 +167,53 @@ println(b)
 #     Sheet["C"*string(ind)] = a
 # end
 
-fig = Figure()
-ind = 100
-ax = Axis(fig[1,1], 
-    aspect = DataAspect(), 
-    xticksvisible = false,
-    xticklabelsvisible=false, 
-    yticksvisible = false, 
-    yticklabelsvisible=false,
-)
-hidespines!(ax)
-hidedecorations!(ax)
-xs = LinRange(0, 1, ind)
-ys = LinRange(0, 1, ind)
-zs = zeros(ind,ind)
-𝗠 = zeros(21)
-# s = 2.1/(ndivs)*ones(length(nodes_s))
-# push!(nodes_s,:s₁=>s,:s₂=>s,:s₃=>s)
-for (i,x) in enumerate(xs)
-    for (j,y) in enumerate(ys)
-        indices = sp(x,y,0.0)
-        ni = length(indices)
-        𝓒 = [nodes_s[i] for i in indices]
-        data = Dict([:x=>(2,[x]),:y=>(2,[y]),:z=>(2,[0.0]),:𝝭=>(4,zeros(ni)),:𝗠=>(0,𝗠)])
-        ξ = 𝑿ₛ((𝑔=1,𝐺=1,𝐶=1,𝑠=0), data)
-        𝓖 = [ξ]
-        a = type(𝓒,𝓖)
-        set𝝭!(a)
-        q = 0.0
-        N = ξ[:𝝭]
-        for (k,xₖ) in enumerate(𝓒)
-            q += N[k]*xₖ.q₁
-            # q += N[k]*xₖ.q₂
-        end
-        zs[i,j] = q
-    end
- end
-surface!(xs,ys,zeros(ind,ind),color=zs,colorrange=(-0.000025,0.000025),colormap=:lightrainbow)
-contour!(xs,ys,zs,levels=-0.000025:0.00000715:0.000025,color=:azure)
-# Colorbar(fig[1,2], limits=(-0.000025,0.000025), colormap=:lightrainbow)
-# save("./png/SquarePlate_mix_tri3_q1_"*string(ndiv)*"_"*string(ndivs)*".png",fig, px_per_unit = 3.0)
-# save("./png/SquarePlate_mix_tri3_q2_"*string(ndiv)*"_"*string(ndivs)*".png",fig, px_per_unit = 10.0)
-save("./png/SquarePlate_mix_tri6_q1_"*string(ndiv)*"_"*string(ndivs)*".png",fig, px_per_unit = 3.0)
-# save("./png/SquarePlate_mix_colorbar.png",fig, px_per_unit = 10.0)
-# save("./png/SquarePlate_mix_tri6_q2_"*string(ndiv)*"_"*string(ndivs)*".png",fig, px_per_unit = 10.0)
-# save("./png/SquarePlate_mix_quad4_q1_"*string(ndiv)*"_"*string(ndivs)*".png",fig, px_per_unit = 3.0)
-# save("./png/SquarePlate_mix_quad4_q2_"*string(ndiv)*"_"*string(ndivs)*".png",fig, px_per_unit = 10.0)
-# save("./png/SquarePlate_mix_quad8_q1_"*string(ndiv)*"_"*string(ndivs)*".png",fig, px_per_unit = 3.0)
-# save("./png/SquarePlate_mix_quad8_q2_"*string(ndiv)*"_"*string(ndivs)*".png",fig, px_per_unit = 10.0)
+# fig = Figure()
+# ind = 100
+# ax = Axis(fig[1,1], 
+#     aspect = DataAspect(), 
+#     xticksvisible = false,
+#     xticklabelsvisible=false, 
+#     yticksvisible = false, 
+#     yticklabelsvisible=false,
+# )
+# hidespines!(ax)
+# hidedecorations!(ax)
+# xs = LinRange(0, 1, ind)
+# ys = LinRange(0, 1, ind)
+# zs = zeros(ind,ind)
+# 𝗠 = zeros(21)
+# # s = 2.1/(ndivs)*ones(length(nodes_s))
+# # push!(nodes_s,:s₁=>s,:s₂=>s,:s₃=>s)
+# for (i,x) in enumerate(xs)
+#     for (j,y) in enumerate(ys)
+#         indices = sp(x,y,0.0)
+#         ni = length(indices)
+#         𝓒 = [nodes_s[i] for i in indices]
+#         data = Dict([:x=>(2,[x]),:y=>(2,[y]),:z=>(2,[0.0]),:𝝭=>(4,zeros(ni)),:𝗠=>(0,𝗠)])
+#         ξ = 𝑿ₛ((𝑔=1,𝐺=1,𝐶=1,𝑠=0), data)
+#         𝓖 = [ξ]
+#         a = type(𝓒,𝓖)
+#         set𝝭!(a)
+#         q = 0.0
+#         N = ξ[:𝝭]
+#         for (k,xₖ) in enumerate(𝓒)
+#             q += N[k]*xₖ.q₁
+#             # q += N[k]*xₖ.q₂
+#         end
+#         zs[i,j] = q
+#     end
+#  end
+# surface!(xs,ys,zeros(ind,ind),color=zs,colorrange=(-0.000025,0.000025),colormap=:lightrainbow)
+# contour!(xs,ys,zs,levels=-0.000025:0.00000715:0.000025,color=:azure)
+# # Colorbar(fig[1,2], limits=(-0.000025,0.000025), colormap=:lightrainbow)
+# # save("./png/SquarePlate_mix_tri3_q1_"*string(ndiv)*"_"*string(ndivs)*".png",fig, px_per_unit = 3.0)
+# # save("./png/SquarePlate_mix_tri3_q2_"*string(ndiv)*"_"*string(ndivs)*".png",fig, px_per_unit = 10.0)
+# save("./png/SquarePlate_mix_tri6_q1_"*string(ndiv)*"_"*string(ndivs)*".png",fig, px_per_unit = 3.0)
+# # save("./png/SquarePlate_mix_colorbar.png",fig, px_per_unit = 10.0)
+# # save("./png/SquarePlate_mix_tri6_q2_"*string(ndiv)*"_"*string(ndivs)*".png",fig, px_per_unit = 10.0)
+# # save("./png/SquarePlate_mix_quad4_q1_"*string(ndiv)*"_"*string(ndivs)*".png",fig, px_per_unit = 3.0)
+# # save("./png/SquarePlate_mix_quad4_q2_"*string(ndiv)*"_"*string(ndivs)*".png",fig, px_per_unit = 10.0)
+# # save("./png/SquarePlate_mix_quad8_q1_"*string(ndiv)*"_"*string(ndivs)*".png",fig, px_per_unit = 3.0)
+# # save("./png/SquarePlate_mix_quad8_q2_"*string(ndiv)*"_"*string(ndivs)*".png",fig, px_per_unit = 10.0)
 
-fig
+# fig
