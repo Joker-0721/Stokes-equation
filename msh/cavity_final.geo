@@ -24,13 +24,15 @@ Transfinite Surface{1};
 Recombine Surface {1};
 
 // 5. 物理组定义
-Physical Curve("Γᵗ") = {3};        // 移动壁面（受力边界）
-Physical Curve("Γᵍ") = {1, 2, 4};  // 固定壁面（几何约束边界）
+Physical Curve("Γ₁") = {1};
+Physical Curve("Γ₂") = {2};
+Physical Curve("Γ₃") = {3};
+Physical Curve("Γ₄") = {4};// 固定壁面（几何约束边界）
 Physical Surface("Ω") = {1};        // 计算域
 
 // 6. 网格生成设置
 Mesh.Algorithm = 8;     // 选择网格生成算法
-Mesh.MshFileVersion = 2;    // 设置网格文件版本
+Mesh.MshFileVersion = 4.1;    // 设置网格文件版本
 Mesh 2;                 // 生成二维网格
 RecombineMesh;          // 重组网格为四边形
 

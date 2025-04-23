@@ -7,7 +7,7 @@ include("import_cavity.jl")
 # ndivs  = 4
 # ndivs2 = 16
 
-elements, nodes, nodes_s, Ω, sp, type = import_cavity_RI("msh/cavity_final.msh","msh/cavity_final.msh");
+elements, nodes, nodes_s, Ω, sp, type = import_cavity_RI("Stokes-equation/msh/cavity_final.msh","Stokes-equation/msh/cavity_final.msh");
 # elements, nodes, nodes_s, Ω, sp, type = import_SquarePlate_mix("msh/SquarePlate/SquarePlate_"*string(ndiv)*".msh","msh/SquarePlate/SquarePlate_q_"*string(ndivs)*".msh");
 # elements, nodes, nodes_s, Ω, sp, type = import_SquarePlate_mix("msh/SquarePlate/SquarePlate_"*string(ndiv)*".msh","msh/SquarePlate/SquarePlate_"*string(ndivs)*"_"*string(ndivs2)*".msh");
 # elements, nodes, nodes_s, Ω, sp, type = import_SquarePlate_mix("msh/SquarePlate/SquarePlate_quad_"*string(ndiv)*".msh","msh/SquarePlate/SquarePlate_quad_"*string(ndivs)*".msh");
@@ -121,32 +121,32 @@ f = [f;zeros(2*nᵘ)]
 
 d = k\f
 # pardiso(ps,d,k,f)
-d₁ = d[1:3:3*nᵘ]
-d₂ = d[2:3:3*nᵘ] 
-# d₃ = d[3:3:3*nᵇ]
-s₁ = d[3*nᵇ+1:2:3*nᵇ+2*nˢ]
-# s₂ = d[3*nᵇ+2:2:3*nᵇ+2*nˢ]
+# d₁ = d[1:3:3*nᵘ]
+# d₂ = d[2:3:3*nᵘ] 
+# # d₃ = d[3:3:3*nᵇ]
+# s₁ = d[3*nᵇ+1:2:3*nᵇ+2*nˢ]
+# # s₂ = d[3*nᵇ+2:2:3*nᵇ+2*nˢ]
 
-push!(nodes,:d₁=>d₁,:d₂=>d₂,:d₃=>d₃)
-push!(nodes_s,:q₁=>s₁,:q₂=>s₂)
-# eval(VTK_mix_pressure)
+# push!(nodes,:d₁=>d₁,:d₂=>d₂,:d₃=>d₃)
+# push!(nodes_s,:q₁=>s₁,:q₂=>s₂)
+# # eval(VTK_mix_pressure)
 
-set𝝭!(elements["Ωᵍ"])
-set∇𝝭!(elements["Ωᵍ"])
-set𝝭!(elements["Ωᵍˢ"])
-set∇𝝭!(elements["Ωᵍˢ"])
+# set𝝭!(elements["Ωᵍ"])
+# set∇𝝭!(elements["Ωᵍ"])
+# set𝝭!(elements["Ωᵍˢ"])
+# set∇𝝭!(elements["Ωᵍˢ"])
 
-prescribe!(elements["Ωᵍ"],:u=>(x,y,z)->w(x,y))
-prescribe!(elements["Ωᵍ"],:θ₁=>(x,y,z)->θ₁(x,y))
-prescribe!(elements["Ωᵍ"],:θ₂=>(x,y,z)->θ₂(x,y))
-prescribe!(elements["Ωᵍˢ"],:Q₁=>(x,y,z)->Q₁(x,y))
-prescribe!(elements["Ωᵍˢ"],:Q₂=>(x,y,z)->Q₂(x,y))
-L₂_u = ops[8](elements["Ωᵍ"])
-L₂_q = ops[9](elements["Ωᵍˢ"])
-a = log10(L₂_u)
-b = log10(L₂_q)
-println(a)
-println(b)
+# prescribe!(elements["Ωᵍ"],:u=>(x,y,z)->w(x,y))
+# prescribe!(elements["Ωᵍ"],:θ₁=>(x,y,z)->θ₁(x,y))
+# prescribe!(elements["Ωᵍ"],:θ₂=>(x,y,z)->θ₂(x,y))
+# prescribe!(elements["Ωᵍˢ"],:Q₁=>(x,y,z)->Q₁(x,y))
+# prescribe!(elements["Ωᵍˢ"],:Q₂=>(x,y,z)->Q₂(x,y))
+# L₂_u = ops[8](elements["Ωᵍ"])
+# L₂_q = ops[9](elements["Ωᵍˢ"])
+# a = log10(L₂_u)
+# b = log10(L₂_q)
+# println(a)
+# println(b)
 # index = 1:20
 # XLSX.openxlsx("./xlsx/SquarePlate.xlsx", mode="rw") do xf
 #     Sheet = xf[6]
