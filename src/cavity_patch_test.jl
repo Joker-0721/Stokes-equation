@@ -7,72 +7,32 @@ include("import_cavity.jl")
 # ndivs  = 4
 # ndivs2 = 16
 
-elements, nodes, nodes_s, Ω, sp, type = import_cavity_RI("Stokes-equation/msh/cavity_final.msh","Stokes-equation/msh/cavity_final.msh");
-# elements, nodes, nodes_s, Ω, sp, type = import_SquarePlate_mix("msh/SquarePlate/SquarePlate_"*string(ndiv)*".msh","msh/SquarePlate/SquarePlate_q_"*string(ndivs)*".msh");
-# elements, nodes, nodes_s, Ω, sp, type = import_SquarePlate_mix("msh/SquarePlate/SquarePlate_"*string(ndiv)*".msh","msh/SquarePlate/SquarePlate_"*string(ndivs)*"_"*string(ndivs2)*".msh");
-# elements, nodes, nodes_s, Ω, sp, type = import_SquarePlate_mix("msh/SquarePlate/SquarePlate_quad_"*string(ndiv)*".msh","msh/SquarePlate/SquarePlate_quad_"*string(ndivs)*".msh");
-# elements, nodes, nodes_s, Ω, sp, type = import_SquarePlate_mix("msh/SquarePlate/SquarePlate_quad_"*string(ndiv)*".msh","msh/SquarePlate/SquarePlate_quad_q_"*string(ndivs)*".msh");
-# elements, nodes, nodes_s, Ω, sp, type = import_SquarePlate_mix("msh/SquarePlate/SquarePlate_quad_"*string(ndiv)*".msh","msh/SquarePlate/SquarePlate_quad_"*string(ndivs)*"_"*string(ndivs2)*".msh");
-# elements, nodes, nodes_s, Ω, sp, type = import_SquarePlate_mix("msh/SquarePlate/SquarePlate_tri6_"*string(ndiv)*".msh","msh/SquarePlate/SquarePlate_tri6_"*string(ndivs)*".msh");
-# elements, nodes, nodes_s, Ω, sp, type = import_SquarePlate_mix("msh/SquarePlate/SquarePlate_tri6_"*string(ndiv)*".msh","msh/SquarePlate/SquarePlate_tri6_q_"*string(ndivs)*".msh");
-# elements, nodes, nodes_s, Ω, sp, type = import_SquarePlate_mix("msh/SquarePlate/SquarePlate_tri6_"*string(ndiv)*".msh","msh/SquarePlate/SquarePlate_tri6_"*string(ndivs)*"_"*string(ndivs2)*".msh");
-# elements, nodes, nodes_s, Ω, sp, type = import_SquarePlate_mix("msh/SquarePlate/SquarePlate_quad8_"*string(ndiv)*".msh","msh/SquarePlate/SquarePlate_quad8_"*string(ndivs)*".msh");
-# elements, nodes, nodes_s, Ω, sp, type = import_SquarePlate_mix("msh/SquarePlate/SquarePlate_quad8_"*string(ndiv)*".msh","msh/SquarePlate/SquarePlate_quad8_q_"*string(ndivs)*".msh");
-# elements, nodes, nodes_s, Ω, sp, type = import_SquarePlate_mix("msh/SquarePlate/SquarePlate_quad8_"*string(ndiv)*".msh","msh/SquarePlate/SquarePlate_quad8_"*string(ndivs)*"_"*string(ndivs2)*".msh");
+elements, nodes, nodes_s = import_cavity_RI("Stokes-equation/msh/cavity_final.msh");
 
 nᵘ = length(nodes)
 nᵖ = length(nodes_s)
 nₑ = length(elements["Ω"])
-nₑₛ = length(Ω)
+# nₑₛ = length(elements["Ω"])
+
 E = 1
 ν = 1
 μ = 1
-# h = 1
-# L = 1.0
-# ps = MKLPardisoSolver()
 
-# Dᵇ = E*h^3/12/(1-ν^2)
-# Dˢ = 5/6*E*h/(2*(1+ν))
-# w(x,y) = 1/3*x^3*(x-1)^3*y^3*(y-1)^3-2*h^2/(5*(1-ν))*(y^3*(y-1)^3*x*(x-1)*(5*x^2-5*x+1)+x^3*(x-1)^3*y*(y-1)*(5*y^2-5*y+1))
-# θ₁(x,y) = y^3*(y-1)^3*x^2*(x-1)^2*(2*x-1)
-# θ₂(x,y) = x^3*(x-1)^3*y^2*(y-1)^2*(2*y-1)
-# F(x,y) = E*h^3/(12*(1-ν^2))*(12*y*(y-1)*(5*x^2-5*x+1)*(2*y^2*(y-1)^2+x*(x-1)*(5*y^2-5*y+1))+12*x*(x-1)*(5*y^2-5*y+1)*(2*x^2*(x-1)^2+y*(y-1)*(5*x^2-5*x+1)))
-
-# w₁(x,y) = (x-1)^2*x^2*(2*x-1)*(y-1)^3*y^3-2*h^2/(5*(1-ν))*((20*x^3-30*x^2+12*x-1)*(y-1)^3*y^3+3*(x-1)^2*x^2*(2*x-1)*(y-1)*y*(5*y^2-5*y+1))
-# w₂(x,y) = (x-1)^3*x^3*(y-1)^2*y^2*(2*y-1)-2*h^2/(5*(1-ν))*(3*(x-1)*x*(5*x^2-5*x+1)*(y-1)^2*y^2*(2*y-1)+x^3*(x-1)^3*(20*y^3-30*y^2+12*y-1))
-# θ₁₁(x,y) = 2*(x-1)*x*(5*x^2-5*x+1)*(y-1)^3*y^3
-# θ₁₂(x,y) = 3*(x-1)^2*x^2*(2*x-1)*(y-1)^2*y^2*(2*y-1)
-# θ₂₂(x,y) = 2*(x-1)^3*x^3*(y-1)*y*(5*y^2-5*y+1)
-# M₁₁(x,y)= -Dᵇ*(θ₁₁(x,y)+ν*θ₂₂(x,y))
-# M₁₂(x,y)= -Dᵇ*(1-ν)*θ₁₂(x,y)
-# M₂₂(x,y)= -Dᵇ*(ν*θ₁₁(x,y)+θ₂₂(x,y))
-# Q₁(x,y) = Dˢ*(w₁(x,y)-θ₁(x,y))
-# Q₂(x,y) = Dˢ*(w₂(x,y)-θ₂(x,y))
-# eval(prescribeForSSNonUniformLoading)
-# eval(prescribeForSimpleSupported)
-# eval(prescribeForCantilever)
 set𝝭!(elements["Ω"])
 set∇𝝭!(elements["Ω"])
 # set𝝭!(elements["Ωˢ"])
 # set∇𝝭!(elements["Ωˢ"])
-set𝝭!(elements["Γᵇ"])
-set𝝭!(elements["Γᵗ"])
-set𝝭!(elements["Γˡ"])
-set𝝭!(elements["Γʳ"])
+set𝝭!(elements["Γ₁"])
+set𝝭!(elements["Γ₂"])
+set𝝭!(elements["Γ₃"])
+set𝝭!(elements["Γ₄"])
 
 ops = [
     Operator{:∫∫μ∇u∇vdxdy}(:μ=>μ),
     Operator{:∫pdivvdxdy}(),
     Operator{:∫bvdxdy}(),
-    # Operator{:∫wqdΩ}(),
-    # Operator{:∫vwdΓ}(:α=>1e13*E),
-    # Operator{:∫vθ₁dΓ}(:α=>1e13*E),
-    # Operator{:∫vθ₂dΓ}(:α=>1e13*E),
-    # Operator{:L₂_ThickPlate}(:E=>E,:ν=>ν),
-    # Operator{:L₂_ThickPlate_Q}(:E=>E,:ν=>ν),
-    # Operator{:∫θM₁dΓ}(),
-    # Operator{:∫θM₂dΓ}(),
-    # Operator{:∫wVdΓ}(),
+    Operator{:∫∫vᵢtᵢds}(),
+
 ]
 kᵘ = zeros(2*nᵘ,2*nᵘ)
 kᵘᵖ = zeros(2*nᵘ,1*nᵖ)
@@ -83,31 +43,20 @@ f = zeros(2*nᵘ)
 ops[1](elements["Ω"],kᵘ)
 ops[2](elements["Ω"],elements["Ωˢ"],kᵘᵖ)
 # ops[3](elements["Ωˢ"],kˢˢ)
-ops[4](elements["Ω"],f)
-ops[5](elements["Γᵇ"],kᵘ,f)
-ops[5](elements["Γᵗ"],kᵘ,f)
-ops[5](elements["Γˡ"],kᵘ,f)
-ops[5](elements["Γʳ"],kᵘ,f)
-ops[6](elements["Γᵇ"],kᵘ,f)
-ops[6](elements["Γᵗ"],kᵘ,f)
-ops[6](elements["Γˡ"],kᵘ,f)
-ops[6](elements["Γʳ"],kᵘ,f)
-ops[7](elements["Γᵇ"],kᵘ,f)
-ops[7](elements["Γᵗ"],kᵘ,f)
-ops[7](elements["Γˡ"],kᵘ,f)
-ops[7](elements["Γʳ"],kᵘ,f)
-# ops[9](elements["Γᵇ"],f)
-# ops[9](elements["Γᵗ"],f)
-# ops[9](elements["Γˡ"],f)
-# ops[9](elements["Γʳ"],f)
-# ops[10](elements["Γᵇ"],f)
-# ops[10](elements["Γᵗ"],f)
-# ops[10](elements["Γˡ"],f)
-# ops[10](elements["Γʳ"],f)
-# ops[11](elements["Γᵇ"],f) 
-# ops[11](elements["Γᵗ"],f)
-# ops[11](elements["Γˡ"],f)
-# ops[11](elements["Γʳ"],f)
+ops[3](elements["Ω"],f)
+ops[4](elements["Γ₁"],kᵘ,f)
+ops[4](elements["Γ₂"],kᵘ,f)
+ops[4](elements["Γ₃"],kᵘ,f)
+ops[4](elements["Γ₄"],kᵘ,f)
+ops[4](elements["Γ₁"],kᵘ,f)
+ops[4](elements["Γ₂"],kᵘ,f)
+ops[4](elements["Γ₃"],kᵘ,f)
+ops[4](elements["Γ₄"],kᵘ,f)
+ops[4](elements["Γ₁"],kᵘ,f)
+ops[4](elements["Γ₂"],kᵘ,f)
+ops[4](elements["Γ₃"],kᵘ,f)
+ops[4](elements["Γ₄"],kᵘ,f)
+
 
 k = [kᵘ kᵘᵖ;kᵘᵖ' kᵖ]
 # k = sparse([kᵇ kʷˢ;kʷˢ' kˢˢ])

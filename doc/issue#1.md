@@ -472,3 +472,61 @@ $$
 
 $$
 
+1. ​**速度變分 $\delta \mathbf{u}$**
+
+$$
+\delta L = \mu \int_\Omega \nabla \delta \mathbf{u} : \nabla \mathbf{u} \, d\Omega - \int_\Omega \delta\mathbf{u} \cdot \mathbf{b} \,d\Omega（1）
+$$
+
+2.​**壓力變分 $\delta p$**
+
+$$
+\delta L = -\int_\Omega \delta p \, (\nabla \cdot \mathbf{u}) \, d\Omega （2）
+$$
+
+**速度离散**
+
+$$
+\begin{split}
+\delta u^h_{i}(\boldsymbol{x}) = \sum_{I=1}^{n_u} N_{I}(\boldsymbol{x}) \delta d_{iI}（3）\\
+u^h_{i}(\boldsymbol{x}) = \sum_{J=1}^{n_u} N_{J}(\boldsymbol{x}) d_{iJ} （4）
+\end{split}
+$$
+
+**应变率张量场**
+
+$$
+\begin{split}
+\varepsilon^h_{ij} 
+&= \frac{1}{2} \left( u^h_{i,j} + u^h_{j,i} \right) \\
+&= \sum_{I=1}^{n_p} \frac{1}{2} \left( N_{I,j} d_{iI} + N_{I,i} d_{jI} \right) （5）\\
+&= \sum_{I=1}^{n_p} \frac{1}{2} \left( N_{I,j} \delta_{ik} + N_{I,i} \delta_{jk} \right) d_{kI}（6）
+\end{split}
+$$
+
+**（3）（4）（6）代入（1）**
+
+$$
+\begin{split}
+\int_{\Omega} 2\mu \, \delta \varepsilon^h_{ij} \varepsilon^h_{ij} \, \mathrm{d}\Omega 
+&= \sum_{I,J}^{n_p} \int_{\Omega} 2\mu \frac{1}{4} \left( N_{I,j} \delta_{ik} + N_{I,i} \delta_{jk} \right) \delta d_{kI} \left( N_{J,j} \delta_{il} + N_{J,i} \delta_{jl} \right) d_{lJ} \, \mathrm{d}\Omega \\
+&= \sum_{I,J}^{n_p} \delta d_{kI} \int_{\Omega} 2\mu \frac{1}{4} \left( N_{I,j} \delta_{ik} + N_{I,i} \delta_{jk} \right) \left( N_{J,j} \delta_{il} + N_{J,i} \delta_{jl} \right) \mathrm{d}\Omega \, d_{lJ}\\
+&=\sum_{I,J}^{n_p} \delta d_{kI} \int_{\Omega} \frac{1}{2} \mu \left( N_{I,j}N_{J,j}\delta_{kl} + 2N_{I,l}N_{J,k} + N_{I,i}N_{J,i}\delta_{kl} \right) \mathrm{d}\Omega \, d_{lJ}\\
+&=\sum_{I,J}^{n_p} \delta d_{kI} \int_{\Omega} \frac{1}{2} \mu \left(2N_{I,i}N_{J,i}\delta_{kl} + 2N_{I,l}N_{J,k} \right) \mathrm{d}\Omega \, d_{lJ}\\
+&=\sum_{I,J}^{n_p} \delta d_{kI} \mu \int_{\Omega} \left(N_{I,i}N_{J,i}\delta_{kl} + N_{I,l}N_{J,k} \right) \mathrm{d}\Omega \, d_{lJ}（7）
+\end{split}
+$$
+
+$$
+K_{IJkl} = \mu \int_{\Omega} (N_{I,i}N_{J,i}\delta_{kl} + N_{I,l}N_{J,k})d\Omega
+$$
+
+$$
+K_{IJ} =
+\begin{bmatrix}
+ \mu \int_{\Omega} 2(N_{I,x}N_{J,x}) + N_{I,x}N_{J,y}d\Omega & 
+ \mu \int_{\Omega} N_{I,x}N_{J,y}d\Omega\\
+ \mu \int_{\Omega} N_{I,x}N_{J,y}d\Omega &
+ \mu \int_{\Omega} N_{I,x}N_{J,x} + 2(N_{I,x}N_{J,y})d\Omega
+\end{bmatrix}
+$$
