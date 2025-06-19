@@ -3,11 +3,11 @@ using CairoMakie
 using SparseArrays
 import BenchmarkExample: BenchmarkExample
 include("import_cavity.jl")
-# ndiv   = 4
-# ndivs  = 4
+ndiv   = 4
+ndivs  = 4
 # ndivs2 = 16
 
-elements, nodes, nodes_s = import_cavity_RI("Stokes-equation/msh/cavity_final.msh");
+elements, nodes, nodes_s= import_cavity_RI("Stokes-equation/msh/square.msh", "Stokes-equation/msh/square.msh");
 
 nᵘ = length(nodes)
 nᵖ = length(nodes_s)
