@@ -7,16 +7,20 @@ ndiv   = 4
 ndivs  = 4
 # ndivs2 = 16
 
-elements, nodes, nodes_s= import_cavity_RI("Stokes-equation/msh/square.msh", "Stokes-equation/msh/square.msh");
+elements, nodes, nodes_s= import_cavity_RI("Stokes-equation/msh/cav_quad_"*string(ndiv)*".msh", "Stokes-equation/msh/cav_quad_"*string(ndiv)*".msh");
 
 nᵘ = length(nodes)
 nᵖ = length(nodes_s)
 nₑ = length(elements["Ω"])
 # nₑₛ = length(elements["Ω"])
 
-E = 1
-ν = 1
-μ = 1
+E = 1.0
+ν = 1.0
+μ = 1.0
+b₁ = 1.0
+b₂ = 1.0
+t₁ = 0.0
+t₂ = 0.0
 
 set𝝭!(elements["Ω"])
 set∇𝝭!(elements["Ω"])
@@ -26,14 +30,28 @@ set𝝭!(elements["Γ₁"])
 set𝝭!(elements["Γ₂"])
 set𝝭!(elements["Γ₃"])
 set𝝭!(elements["Γ₄"])
+prescribe!(elements["Ω"],:b₁=>(x,y,z)->b₁)
+prescribe!(elements["Ω"],:b₂=>(x,y,z)->b₂)
+prescribe!(elements["Γ₁"],:t₁=>(x,y,z)->t₁)
+prescribe!(elements["Γ₁"],:t₂=>(x,y,z)->t₂)
+prescribe!(elements["Γ₂"],:t₁=>(x,y,z)->t₁)
+prescribe!(elements["Γ₂"],:t₂=>(x,y,z)->t₂)
+prescribe!(elements["Γ₃"],:t₁=>(x,y,z)->t₁)
+prescribe!(elements["Γ₃"],:t₂=>(x,y,z)->t₂)
+prescribe!(elements["Γ₄"],:t₁=>(x,y,z)->t₁)
+prescribe!(elements["Γ₄"],:t₂=>(x,y,z)->t₂)
+prescribe!(elements["Γ₁"],:g=>(x,y,z)->0.0)
+prescribe!(elements["Γ₂"],:g=>(x,y,z)->0.0)
+prescribe!(elements["Γ₃"],:g=>(x,y,z)->0.0)
+prescribe!(elements["Γ₄"],:g=>(x,y,z)->0.0)
 
 ops = [
     Operator{:∫∫μ∇u∇vdxdy}(:μ=>μ),
     Operator{:∫pdivvdxdy}(),
-    Operator{:∫bvdxdy}(),
-    Operator{:∫∫vᵢtᵢds}(),
-
+    Operator{:∫∫vᵢbᵢdxdy}(),
+    Operator{:∫vᵢtᵢds}(),
 ]
+
 kᵘ = zeros(2*nᵘ,2*nᵘ)
 kᵘᵖ = zeros(2*nᵘ,1*nᵖ)
 kᵖ = zeros(1*nᵖ,1*nᵖ)
@@ -42,25 +60,24 @@ f = zeros(2*nᵘ)
 
 ops[1](elements["Ω"],kᵘ)
 ops[2](elements["Ω"],elements["Ωˢ"],kᵘᵖ)
-# ops[3](elements["Ωˢ"],kˢˢ)
+# ops[3](elements["Ωˢ"],kᵖ)
 ops[3](elements["Ω"],f)
-ops[4](elements["Γ₁"],kᵘ,f)
-ops[4](elements["Γ₂"],kᵘ,f)
-ops[4](elements["Γ₃"],kᵘ,f)
-ops[4](elements["Γ₄"],kᵘ,f)
-ops[4](elements["Γ₁"],kᵘ,f)
-ops[4](elements["Γ₂"],kᵘ,f)
-ops[4](elements["Γ₃"],kᵘ,f)
-ops[4](elements["Γ₄"],kᵘ,f)
-ops[4](elements["Γ₁"],kᵘ,f)
-ops[4](elements["Γ₂"],kᵘ,f)
-ops[4](elements["Γ₃"],kᵘ,f)
-ops[4](elements["Γ₄"],kᵘ,f)
+ops[4](elements["Γ₁"],f)
+ops[4](elements["Γ₂"],f)
+ops[4](elements["Γ₃"],f)
+ops[4](elements["Γ₄"],f)
+# ops[4](elements["Γ₂"],f)
+# ops[4](elements["Γ₃"],f)
+# ops[4](elements["Γ₄"],f)
+# ops[4](elements["Γ₁"],f)
+# ops[4](elements["Γ₂"],f)
+# ops[4](elements["Γ₃"],f)
+# ops[4](elements["Γ₄"],f)
 
 
 k = [kᵘ kᵘᵖ;kᵘᵖ' kᵖ]
 # k = sparse([kᵇ kʷˢ;kʷˢ' kˢˢ])
-f = [f;zeros(2*nᵘ)]
+f = [f;zeros(nᵖ)]
 
 # k = kʷˢ*inv(kˢˢ)*kʷˢ'
 # k = -kʷˢ*(kˢˢ\kʷˢ')
@@ -68,7 +85,7 @@ f = [f;zeros(2*nᵘ)]
 # println(log10(a[3*nᵇ-2nˢ+1]))
 # println(a[3*nᵇ-2nˢ+1])
 
-d = k\f
+# d = k\f
 # pardiso(ps,d,k,f)
 # d₁ = d[1:3:3*nᵘ]
 # d₂ = d[2:3:3*nᵘ] 

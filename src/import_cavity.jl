@@ -33,7 +33,6 @@ function import_cavity_RI(filename1::String,filename2::String)
     integrationOrder_Ωᵍ = 10
     entities = getPhysicalGroups()
     nodes = get𝑿ᵢ()
-    println("Nodes content: ", nodes)
     x = nodes.x
     y = nodes.y
     z = nodes.z
@@ -49,7 +48,6 @@ function import_cavity_RI(filename1::String,filename2::String)
     integrationOrder_Ωˢ = 0
     entities = getPhysicalGroups()
     nodes_s = get𝑿ᵢ()
-    println("Nodes_s content: ", nodes_s)
     elements["Ωˢ"] = getElements(nodes_s, entities["Ω"], integrationOrder_Ωˢ)
     # s = 1.6*5/(ndivs)*ones(length(nodes_s))    
     push!(elements["Γ₁"], :𝝭=>:𝑠)
