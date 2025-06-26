@@ -1,15 +1,14 @@
 using ApproxOperator, XLSX
 using WriteVTK ,Pardiso
 using SparseArrays, LinearAlgebra
-using SuiteSparse
-import BenchmarkExample: BenchmarkExample
+import ApproxOperator.Stokes:∫∫μ∇u∇vdxdy
+import ApproxOperator.Elasticity:∫∫p∇udxdy, ∫vᵢtᵢds, ∫∫vᵢbᵢdxdy, ∫vᵢgᵢds
 
 include("import_cavity.jl")
 
 ps = MKLPardisoSolver()
 
-ndiv   = 4
-ndivs  = 4
+ndiv = 4
 
 elements, nodes, nodes_s= import_cavity_RI("Stokes-equation/msh/cav_quad_"*string(ndiv)*".msh", "Stokes-equation/msh/cav_quad_"*string(ndiv)*".msh");
 
@@ -24,9 +23,9 @@ b₁ = 0.5
 b₂ = 0.5
 t₁ = 0.5
 t₂ = 0.5
+
 n₁₁(n₁,n₂) = 1.0
 n₂₂(n₁,n₂) = 1.0
-
 prescribe!(elements["Ω"],:b₁=>(x,y,z)->b₁)
 prescribe!(elements["Ω"],:b₂=>(x,y,z)->b₂)
 prescribe!(elements["Γ₁"],:t₁=>(x,y,z)->t₁)
@@ -54,42 +53,48 @@ prescribe!(elements["Γ₄"],:n₁₁=>(x,y,z,n₁,n₂)->n₁₁(n₁,n₂))
 prescribe!(elements["Γ₄"],:n₂₂=>(x,y,z,n₁,n₂)->n₂₂(n₁,n₂))
 prescribe!(elements["Γ₄"],:n₁₂=>(x,y,z)->0.0)
 
-
-ops = [
-    Operator{:∫∫μ∇u∇vdxdy}(:μ=>μ),
-    Operator{:∫∫p∇vdxdy}(),
-    Operator{:∫∫vᵢbᵢdxdy}(),
-    Operator{:∫vᵢtᵢds}(),
-    Operator{:∫vᵢgᵢdΓ}(),
+aᵘ = ∫∫μ∇u∇vdxdy => elements["Ω"],:μ=>μ
+bᵖ = ∫∫p∇udxdy => elements["Ω"],elements["Ωˢ"]
+f = [
+    ∫vᵢbᵢdxdy => elements["Ω"],
+    ∫vᵢtᵢds => elements["Γ₁"],
+    ∫vᵢtᵢds => elements["Γ₂"],
+    ∫vᵢtᵢds => elements["Γ₃"],
+    ∫vᵢtᵢds => elements["Γ₄"],
+    ∫vᵢgᵢdΓ => elements["Γ₁"]kᵘ,
+    ∫vᵢgᵢdΓ => elements["Γ₂"]kᵘ,
+    ∫vᵢgᵢdΓ => elements["Γ₃"]kᵘ,
+    ∫vᵢgᵢdΓ => elements["Γ₄"]kᵘ
 ]
+aᵅ = [
+    ∫vᵢgᵢdΓ => elements["Γ₁"],
+    ∫vᵢgᵢdΓ => elements["Γ₂"],
+    ∫vᵢgᵢdΓ => elements["Γ₃"],
+    ∫vᵢgᵢdΓ => elements["Γ₄"]
+    ]
 
-kᵘ = zeros(2*nᵘ,2*nᵘ)
+kᵘᵘ = zeros(2*nᵘ,2*nᵘ)
 kᵘᵖ = zeros(nᵖ,2*nᵘ)
-kᵖ = zeros(nᵖ,nᵖ)
-f = zeros(2*nᵘ)
-
-ops[1](elements["Ω"],kᵘ)
-ops[2](elements["Ω"],elements["Ωˢ"],kᵘᵖ)
-ops[3](elements["Ω"],f)
-ops[4](elements["Γ₁"],f)
-ops[4](elements["Γ₂"],f)
-ops[4](elements["Γ₃"],f)
-ops[4](elements["Γ₄"],f)
-ops[5](elements["Γ₁"]kᵘ,f)
-ops[5](elements["Γ₂"]kᵘ,f)
-ops[5](elements["Γ₃"]kᵘ,f)
-ops[5](elements["Γ₄"]kᵘ,f)
-
-k = [kᵘ kᵘᵖ';kᵘᵖ kᵖ]
-f = [f;zeros(nᵖ)]
-
+kᵖᵖ = zeros(nᵖ,nᵖ)
+fᵖ = zeros(nᵖ)
+fᵘ = zeros(2*nᵘ)
 d = zeros(2*nᵘ+nᵖ)
+
+aᵘ(kᵘᵘ)
+aᵖ(kᵖᵖ)
+bᵖ(kᵘᵖ)
+𝑎ᵅ(kᵘᵘ,fᵘ)
+f(fᵘ)
+
+k = sparse[kᵘ kᵘᵖ';kᵘᵖ kᵖ]
+f = [fᵘ;fᵖ]
+
 d = k\f
 set_matrixtype!(ps, -2)
 k = get_matrix(ps,k,:N)
 pardiso(ps,d,k,f)
-# d₁ = d[1:3:3*nᵘ]
-# d₂ = d[2:3:3*nᵘ]
+d₁ = d[1:3:3*nᵘ]
+d₂ = d[2:3:3*nᵘ]
 
 # u = d[1:2nᵘ]
 # p = d[2nᵘ+1:end]
