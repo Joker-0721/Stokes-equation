@@ -1,4 +1,5 @@
 using ApproxOperator, XLSX
+using WriteVTK
 using CairoMakie
 using SparseArrays
 import BenchmarkExample: BenchmarkExample
@@ -16,11 +17,11 @@ nₑ = length(elements["Ω"])
 
 E = 1.0
 ν = 1.0
-μ = 1.0
-b₁ = 1.0
-b₂ = 1.0
-t₁ = 0.0
-t₂ = 0.0
+μ = 0.5
+b₁ = 0.5
+b₂ = 0.5
+t₁ = 0.5
+t₂ = 0.5
 
 set𝝭!(elements["Ω"])
 set∇𝝭!(elements["Ω"])
@@ -47,14 +48,14 @@ prescribe!(elements["Γ₄"],:g=>(x,y,z)->0.0)
 
 ops = [
     Operator{:∫∫μ∇u∇vdxdy}(:μ=>μ),
-    Operator{:∫pdivvdxdy}(),
+    Operator{:∫∫p∇vdxdy}(),
     Operator{:∫∫vᵢbᵢdxdy}(),
     Operator{:∫vᵢtᵢds}(),
 ]
 
 kᵘ = zeros(2*nᵘ,2*nᵘ)
-kᵘᵖ = zeros(2*nᵘ,1*nᵖ)
-kᵖ = zeros(1*nᵖ,1*nᵖ)
+kᵘᵖ = zeros(nᵖ,2*nᵘ)
+kᵖ = zeros(nᵖ,nᵖ)
 f = zeros(2*nᵘ)
 # d = zeros(3*nᵇ+2*nˢ)
 
@@ -75,8 +76,7 @@ ops[4](elements["Γ₄"],f)
 # ops[4](elements["Γ₄"],f)
 
 
-k = [kᵘ kᵘᵖ;kᵘᵖ' kᵖ]
-# k = sparse([kᵇ kʷˢ;kʷˢ' kˢˢ])
+k = [kᵘ kᵘᵖ';kᵘᵖ kᵖ]
 f = [f;zeros(nᵖ)]
 
 # k = kʷˢ*inv(kˢˢ)*kʷˢ'
@@ -126,7 +126,7 @@ f = [f;zeros(nᵖ)]
 # e = abs(wᶜ[1]-𝑣)
 
 # index = [8,16,32,64]
-# XLSX.openxlsx("./xlsx/SquarePlate.xlsx", mode="rw") do xf
+# XLSX.openxlsx("cav_patch.xlsx", mode="rw") do xf
 #     Sheet = xf[3]
 #     ind = findfirst(n->n==ndiv,index)+1
 #     Sheet["B"*string(ind)] = log10(1/ndiv)
@@ -142,6 +142,7 @@ f = [f;zeros(nᵖ)]
 #     yticksvisible = false, 
 #     yticklabelsvisible=false,
 # )
+
 # hidespines!(ax)
 # hidedecorations!(ax)
 # xs = LinRange(0, 1, ind)
@@ -171,15 +172,15 @@ f = [f;zeros(nᵖ)]
 #  end
 # surface!(xs,ys,zeros(ind,ind),color=zs,colorrange=(-0.000025,0.000025),colormap=:lightrainbow)
 # contour!(xs,ys,zs,levels=-0.000025:0.00000715:0.000025,color=:azure)
-# # Colorbar(fig[1,2], limits=(-0.000025,0.000025), colormap=:lightrainbow)
-# # save("./png/SquarePlate_mix_tri3_q1_"*string(ndiv)*"_"*string(ndivs)*".png",fig, px_per_unit = 3.0)
-# # save("./png/SquarePlate_mix_tri3_q2_"*string(ndiv)*"_"*string(ndivs)*".png",fig, px_per_unit = 10.0)
+# Colorbar(fig[1,2], limits=(-0.000025,0.000025), colormap=:lightrainbow)
+# save("./png/SquarePlate_mix_tri3_q1_"*string(ndiv)*"_"*string(ndivs)*".png",fig, px_per_unit = 3.0)
+# save("./png/SquarePlate_mix_tri3_q2_"*string(ndiv)*"_"*string(ndivs)*".png",fig, px_per_unit = 10.0)
 # save("./png/SquarePlate_mix_tri6_q1_"*string(ndiv)*"_"*string(ndivs)*".png",fig, px_per_unit = 3.0)
-# # save("./png/SquarePlate_mix_colorbar.png",fig, px_per_unit = 10.0)
-# # save("./png/SquarePlate_mix_tri6_q2_"*string(ndiv)*"_"*string(ndivs)*".png",fig, px_per_unit = 10.0)
-# # save("./png/SquarePlate_mix_quad4_q1_"*string(ndiv)*"_"*string(ndivs)*".png",fig, px_per_unit = 3.0)
-# # save("./png/SquarePlate_mix_quad4_q2_"*string(ndiv)*"_"*string(ndivs)*".png",fig, px_per_unit = 10.0)
-# # save("./png/SquarePlate_mix_quad8_q1_"*string(ndiv)*"_"*string(ndivs)*".png",fig, px_per_unit = 3.0)
-# # save("./png/SquarePlate_mix_quad8_q2_"*string(ndiv)*"_"*string(ndivs)*".png",fig, px_per_unit = 10.0)
+# save("./png/SquarePlate_mix_colorbar.png",fig, px_per_unit = 10.0)
+# save("./png/SquarePlate_mix_tri6_q2_"*string(ndiv)*"_"*string(ndivs)*".png",fig, px_per_unit = 10.0)
+save("./png/cav_mix_quad4_q1_"*string(ndiv)*"_"*string(ndivs)*".png",fig, px_per_unit = 3.0)
+# save("./png/SquarePlate_mix_quad4_q2_"*string(ndiv)*"_"*string(ndivs)*".png",fig, px_per_unit = 10.0)
+# save("./png/SquarePlate_mix_quad8_q1_"*string(ndiv)*"_"*string(ndivs)*".png",fig, px_per_unit = 3.0)
+# save("./png/SquarePlate_mix_quad8_q2_"*string(ndiv)*"_"*string(ndivs)*".png",fig, px_per_unit = 10.0)
 
 # fig
