@@ -57,6 +57,15 @@ function import_cavity_RI(filename1::String,filename2::String)
     push!(elements["Ω"], :𝝭=>:𝑠, :∂𝝭∂x=>:𝑠, :∂𝝭∂y=>:𝑠)
     push!(elements["Ωˢ"], :𝝭=>:𝑠, :∂𝝭∂x=>:𝑠, :∂𝝭∂y=>:𝑠)
     push!(elements["Ωᵍ"], :𝝭=>:𝑠, :∂𝝭∂x=>:𝑠, :∂𝝭∂y=>:𝑠)
+
+    set𝝭!(elements["Ω"])
+    set∇𝝭!(elements["Ω"])
+    
+    set𝝭!(elements["Γ₁"])
+    set𝝭!(elements["Γ₂"])
+    set𝝭!(elements["Γ₃"])
+    set𝝭!(elements["Γ₄"])
+
     gmsh.finalize()
     return elements, nodes, nodes_s
 end

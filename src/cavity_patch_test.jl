@@ -1,19 +1,21 @@
 using ApproxOperator, XLSX
-using WriteVTK
-using CairoMakie
-using SparseArrays
+using WriteVTK ,Pardiso
+using SparseArrays, LinearAlgebra
+using SuiteSparse
 import BenchmarkExample: BenchmarkExample
+
 include("import_cavity.jl")
+
+ps = MKLPardisoSolver()
+
 ndiv   = 4
 ndivs  = 4
-# ndivs2 = 16
 
 elements, nodes, nodes_s= import_cavity_RI("Stokes-equation/msh/cav_quad_"*string(ndiv)*".msh", "Stokes-equation/msh/cav_quad_"*string(ndiv)*".msh");
 
 nᵘ = length(nodes)
 nᵖ = length(nodes_s)
 nₑ = length(elements["Ω"])
-# nₑₛ = length(elements["Ω"])
 
 E = 1.0
 ν = 1.0
@@ -22,15 +24,9 @@ b₁ = 0.5
 b₂ = 0.5
 t₁ = 0.5
 t₂ = 0.5
+n₁₁(n₁,n₂) = 1.0
+n₂₂(n₁,n₂) = 1.0
 
-set𝝭!(elements["Ω"])
-set∇𝝭!(elements["Ω"])
-# set𝝭!(elements["Ωˢ"])
-# set∇𝝭!(elements["Ωˢ"])
-set𝝭!(elements["Γ₁"])
-set𝝭!(elements["Γ₂"])
-set𝝭!(elements["Γ₃"])
-set𝝭!(elements["Γ₄"])
 prescribe!(elements["Ω"],:b₁=>(x,y,z)->b₁)
 prescribe!(elements["Ω"],:b₂=>(x,y,z)->b₂)
 prescribe!(elements["Γ₁"],:t₁=>(x,y,z)->t₁)
@@ -45,39 +41,85 @@ prescribe!(elements["Γ₁"],:g=>(x,y,z)->0.0)
 prescribe!(elements["Γ₂"],:g=>(x,y,z)->0.0)
 prescribe!(elements["Γ₃"],:g=>(x,y,z)->0.0)
 prescribe!(elements["Γ₄"],:g=>(x,y,z)->0.0)
+prescribe!(elements["Γ₁"],:n₁₁=>(x,y,z,n₁,n₂)->n₁₁(n₁,n₂))
+prescribe!(elements["Γ₁"],:n₂₂=>(x,y,z,n₁,n₂)->n₂₂(n₁,n₂))
+prescribe!(elements["Γ₁"],:n₁₂=>(x,y,z)->0.0)
+prescribe!(elements["Γ₂"],:n₁₁=>(x,y,z,n₁,n₂)->n₁₁(n₁,n₂))
+prescribe!(elements["Γ₂"],:n₂₂=>(x,y,z,n₁,n₂)->n₂₂(n₁,n₂))
+prescribe!(elements["Γ₂"],:n₁₂=>(x,y,z)->0.0)
+prescribe!(elements["Γ₃"],:n₁₁=>(x,y,z,n₁,n₂)->n₁₁(n₁,n₂))
+prescribe!(elements["Γ₃"],:n₂₂=>(x,y,z,n₁,n₂)->0.0)
+prescribe!(elements["Γ₃"],:n₁₂=>(x,y,z)->0.0)
+prescribe!(elements["Γ₄"],:n₁₁=>(x,y,z,n₁,n₂)->n₁₁(n₁,n₂))
+prescribe!(elements["Γ₄"],:n₂₂=>(x,y,z,n₁,n₂)->n₂₂(n₁,n₂))
+prescribe!(elements["Γ₄"],:n₁₂=>(x,y,z)->0.0)
+
 
 ops = [
     Operator{:∫∫μ∇u∇vdxdy}(:μ=>μ),
     Operator{:∫∫p∇vdxdy}(),
     Operator{:∫∫vᵢbᵢdxdy}(),
     Operator{:∫vᵢtᵢds}(),
+    Operator{:∫vᵢgᵢdΓ}(),
 ]
 
 kᵘ = zeros(2*nᵘ,2*nᵘ)
 kᵘᵖ = zeros(nᵖ,2*nᵘ)
 kᵖ = zeros(nᵖ,nᵖ)
 f = zeros(2*nᵘ)
-# d = zeros(3*nᵇ+2*nˢ)
 
 ops[1](elements["Ω"],kᵘ)
 ops[2](elements["Ω"],elements["Ωˢ"],kᵘᵖ)
-# ops[3](elements["Ωˢ"],kᵖ)
 ops[3](elements["Ω"],f)
 ops[4](elements["Γ₁"],f)
 ops[4](elements["Γ₂"],f)
 ops[4](elements["Γ₃"],f)
 ops[4](elements["Γ₄"],f)
-# ops[4](elements["Γ₂"],f)
-# ops[4](elements["Γ₃"],f)
-# ops[4](elements["Γ₄"],f)
-# ops[4](elements["Γ₁"],f)
-# ops[4](elements["Γ₂"],f)
-# ops[4](elements["Γ₃"],f)
-# ops[4](elements["Γ₄"],f)
-
+ops[5](elements["Γ₁"]kᵘ,f)
+ops[5](elements["Γ₂"]kᵘ,f)
+ops[5](elements["Γ₃"]kᵘ,f)
+ops[5](elements["Γ₄"]kᵘ,f)
 
 k = [kᵘ kᵘᵖ';kᵘᵖ kᵖ]
 f = [f;zeros(nᵖ)]
+
+d = zeros(2*nᵘ+nᵖ)
+d = k\f
+set_matrixtype!(ps, -2)
+k = get_matrix(ps,k,:N)
+pardiso(ps,d,k,f)
+# d₁ = d[1:3:3*nᵘ]
+# d₂ = d[2:3:3*nᵘ]
+
+# u = d[1:2nᵘ]
+# p = d[2nᵘ+1:end]
+
+# # 创建 VTK 网格
+# points = zeros(3, nᵘ)
+# for (i, node) in enumerate(nodes)
+#     points[1, i] = node.x
+#     points[2, i] = node.y
+#     points[3, i] = 0.0  # 2D问题，z坐标为0
+# end
+
+# # 创建单元连接关系
+# cells = []
+# for elem in elements["Ω"]
+#     # 假设是四边形单元，每个单元有4个节点
+#     push!(cells, MeshCell(VTKCellTypes.VTK_QUAD, elem.𝓒))
+# end
+
+# # 创建 VTK 文件
+# vtk_grid("cavity_flow", points, cells) do vtk
+#     # 添加速度场
+#     u₁ = u[1:2:end]  # u1分量
+#     u₂ = u[2:2:end]  # u2分量
+#     vtk["Velocity"] = (u₁, u₂, zeros(nᵘ))  # 2D问题，第三个分量为0
+    
+#     # 添加压力场（需要插值到节点上）
+#     # 这里假设压力节点与速度节点相同，实际情况可能需要调整
+#     vtk["Pressure"] = p
+# end
 
 # k = kʷˢ*inv(kˢˢ)*kʷˢ'
 # k = -kʷˢ*(kˢˢ\kʷˢ')
@@ -91,7 +133,7 @@ f = [f;zeros(nᵖ)]
 # d₂ = d[2:3:3*nᵘ] 
 # # d₃ = d[3:3:3*nᵇ]
 # s₁ = d[3*nᵇ+1:2:3*nᵇ+2*nˢ]
-# # s₂ = d[3*nᵇ+2:2:3*nᵇ+2*nˢ]
+# s₂ = d[3*nᵇ+2:2:3*nᵇ+2*nˢ]
 
 # push!(nodes,:d₁=>d₁,:d₂=>d₂,:d₃=>d₃)
 # push!(nodes_s,:q₁=>s₁,:q₂=>s₂)
@@ -178,7 +220,7 @@ f = [f;zeros(nᵖ)]
 # save("./png/SquarePlate_mix_tri6_q1_"*string(ndiv)*"_"*string(ndivs)*".png",fig, px_per_unit = 3.0)
 # save("./png/SquarePlate_mix_colorbar.png",fig, px_per_unit = 10.0)
 # save("./png/SquarePlate_mix_tri6_q2_"*string(ndiv)*"_"*string(ndivs)*".png",fig, px_per_unit = 10.0)
-save("./png/cav_mix_quad4_q1_"*string(ndiv)*"_"*string(ndivs)*".png",fig, px_per_unit = 3.0)
+# save("./png/cav_mix_quad4_q1_"*string(ndiv)*"_"*string(ndivs)*".png",fig, px_per_unit = 3.0)
 # save("./png/SquarePlate_mix_quad4_q2_"*string(ndiv)*"_"*string(ndivs)*".png",fig, px_per_unit = 10.0)
 # save("./png/SquarePlate_mix_quad8_q1_"*string(ndiv)*"_"*string(ndivs)*".png",fig, px_per_unit = 3.0)
 # save("./png/SquarePlate_mix_quad8_q2_"*string(ndiv)*"_"*string(ndivs)*".png",fig, px_per_unit = 10.0)
