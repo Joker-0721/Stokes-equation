@@ -20,29 +20,30 @@ function import_cavity_fem(filename::String)
     elements["Γ₂"] = getElements(nodes, entities["Γ₂"], integrationOrder,normal=true)
     elements["Γ₃"] = getElements(nodes, entities["Γ₃"], integrationOrder,normal=true)
     elements["Γ₄"] = getElements(nodes, entities["Γ₄"], integrationOrder,normal=true)
-    push!(elements["Ωᵍ"], :𝝭=>:𝑠, :∂𝝭∂x=>:𝑠, :∂𝝭∂y=>:𝑠)
+    push!(elements["Ωᵍ"], :𝝭, :∂𝝭∂x, :∂𝝭∂y)
     # gmsh.finalize()
     return elements, nodes
 end
 
 function import_cavity_RI(filename1::String,filename2::String)
+    elements = Dict{String,Vector{ApproxOperator.AbstractElement}}()
     gmsh.initialize()
     gmsh.open(filename1)
 
-    integrationOrder = 3
+    integrationOrder_Ω = 3
     integrationOrder_Ωᵍ = 10
+    integrationOrder_Γ = 3
     entities = getPhysicalGroups()
     nodes = get𝑿ᵢ()
     x = nodes.x
     y = nodes.y
     z = nodes.z
-    elements = Dict{String,Vector{ApproxOperator.AbstractElement}}()
-    elements["Ω"] = getElements(nodes, entities["Ω"], integrationOrder)
+    elements["Ω"] = getElements(nodes, entities["Ω"], integrationOrder_Ω)
     elements["Ωᵍ"] = getElements(nodes, entities["Ω"], integrationOrder_Ωᵍ)
-    elements["Γ₁"] = getElements(nodes, entities["Γ₁"], integrationOrder,normal=true)
-    elements["Γ₂"] = getElements(nodes, entities["Γ₂"], integrationOrder,normal=true)
-    elements["Γ₃"] = getElements(nodes, entities["Γ₃"], integrationOrder,normal=true)
-    elements["Γ₄"] = getElements(nodes, entities["Γ₄"], integrationOrder,normal=true)
+    elements["Γ₁"] = getElements(nodes, entities["Γ₁"], integrationOrder_Γ,normal=true)
+    elements["Γ₂"] = getElements(nodes, entities["Γ₂"], integrationOrder_Γ,normal=true)
+    elements["Γ₃"] = getElements(nodes, entities["Γ₃"], integrationOrder_Γ,normal=true)
+    elements["Γ₄"] = getElements(nodes, entities["Γ₄"], integrationOrder_Γ,normal=true)
     
     gmsh.open(filename2)
     integrationOrder_Ωˢ = 0
@@ -50,17 +51,18 @@ function import_cavity_RI(filename1::String,filename2::String)
     nodes_s = get𝑿ᵢ()
     elements["Ωˢ"] = getElements(nodes_s, entities["Ω"], integrationOrder_Ωˢ)
    
-    push!(elements["Γ₁"], :𝝭=>:𝑠)
-    push!(elements["Γ₂"], :𝝭=>:𝑠)
-    push!(elements["Γ₃"], :𝝭=>:𝑠)
-    push!(elements["Γ₄"], :𝝭=>:𝑠)
-    push!(elements["Ω"], :𝝭=>:𝑠, :∂𝝭∂x=>:𝑠, :∂𝝭∂y=>:𝑠)
-    push!(elements["Ωˢ"], :𝝭=>:𝑠, :∂𝝭∂x=>:𝑠, :∂𝝭∂y=>:𝑠)
-    push!(elements["Ωᵍ"], :𝝭=>:𝑠, :∂𝝭∂x=>:𝑠, :∂𝝭∂y=>:𝑠)
+    push!(elements["Γ₁"], :𝝭)
+    push!(elements["Γ₂"], :𝝭)
+    push!(elements["Γ₃"], :𝝭)
+    push!(elements["Γ₄"], :𝝭)
+    push!(elements["Ω"], :𝝭, :∂𝝭∂x, :∂𝝭∂y)
+    push!(elements["Ωˢ"], :𝝭, :∂𝝭∂x, :∂𝝭∂y)
+    push!(elements["Ωᵍ"], :𝝭, :∂𝝭∂x, :∂𝝭∂y)
 
     set𝝭!(elements["Ω"])
     set∇𝝭!(elements["Ω"])
-    
+    set𝝭!(elements["Ωᵍ"])
+    set∇𝝭!(elements["Ωᵍ"])
     set𝝭!(elements["Γ₁"])
     set𝝭!(elements["Γ₂"])
     set𝝭!(elements["Γ₃"])
@@ -94,8 +96,8 @@ function import_cavity_test(filename1::String,filename2::String)
     entities = getPhysicalGroups()
     nodes_s = get𝑿ᵢ()
     elements["Ωˢ"] = getElements(nodes_s, entities["Ω"], integrationOrder)
-    push!(elements["Ωˢ"], :𝝭=>:𝑠, :∂𝝭∂x=>:𝑠, :∂𝝭∂y=>:𝑠)
-    push!(elements["Ωᵍ"], :𝝭=>:𝑠, :∂𝝭∂x=>:𝑠, :∂𝝭∂y=>:𝑠)
+    push!(elements["Ωˢ"], :𝝭, :∂𝝭∂x, :∂𝝭∂y)
+    push!(elements["Ωᵍ"], :𝝭, :∂𝝭∂x, :∂𝝭∂y)
     # gmsh.finalize()
     return elements, nodes, nodes_s
 end
@@ -123,17 +125,17 @@ function import_patch_test_quad_mix(filename1::String,filename2::String)
     entities = getPhysicalGroups()
     nodes_s = get𝑿ᵢ()
     elements["Ωˢ"] = getElements(nodes_s, entities["Ω"], integrationOrder)
-    push!(elements["Ωˢ"], :𝝭=>:𝑠, :∂𝝭∂x=>:𝑠, :∂𝝭∂y=>:𝑠)
-    push!(elements["Ωᵍ"], :𝝭=>:𝑠, :∂𝝭∂x=>:𝑠, :∂𝝭∂y=>:𝑠)
+    push!(elements["Ωˢ"], :𝝭, :∂𝝭∂x, :∂𝝭∂y)
+    push!(elements["Ωᵍ"], :𝝭, :∂𝝭∂x, :∂𝝭∂y)
     # gmsh.finalize()
     return elements, nodes, nodes_s
 end
 prescribeForFem = quote
-    push!(elements["Ω"], :𝝭=>:𝑠, :∂𝝭∂x=>:𝑠, :∂𝝭∂y=>:𝑠)
-    push!(elements["Γ₁"], :𝝭=>:𝑠)
-    push!(elements["Γ₂"], :𝝭=>:𝑠)
-    push!(elements["Γ₃"], :𝝭=>:𝑠)
-    push!(elements["Γ₄"], :𝝭=>:𝑠)
+    push!(elements["Ω"], :𝝭, :∂𝝭∂x, :∂𝝭∂y)
+    push!(elements["Γ₁"], :𝝭)
+    push!(elements["Γ₂"], :𝝭)
+    push!(elements["Γ₃"], :𝝭)
+    push!(elements["Γ₄"], :𝝭)
 
     prescribe!(elements["Γ₁"],:g=>(x,y,z)->w(x,y))
     prescribe!(elements["Γ₂"],:g=>(x,y,z)->w(x,y))

@@ -1,4 +1,5 @@
-using ApproxOperator, XLSX
+using ApproxOperator
+using XLSX
 using WriteVTK ,Pardiso
 using SparseArrays, LinearAlgebra
 import ApproxOperator.Stokes:∫∫μ∇u∇vdxdy
@@ -53,40 +54,35 @@ prescribe!(elements["Γ₄"],:n₁₁=>(x,y,z,n₁,n₂)->n₁₁(n₁,n₂))
 prescribe!(elements["Γ₄"],:n₂₂=>(x,y,z,n₁,n₂)->n₂₂(n₁,n₂))
 prescribe!(elements["Γ₄"],:n₁₂=>(x,y,z)->0.0)
 
-aᵘ = ∫∫μ∇u∇vdxdy => elements["Ω"],:μ=>μ
-bᵖ = ∫∫p∇udxdy => elements["Ω"],elements["Ωˢ"]
-f = [
-    ∫vᵢbᵢdxdy => elements["Ω"],
-    ∫vᵢtᵢds => elements["Γ₁"],
-    ∫vᵢtᵢds => elements["Γ₂"],
-    ∫vᵢtᵢds => elements["Γ₃"],
-    ∫vᵢtᵢds => elements["Γ₄"],
-    ∫vᵢgᵢdΓ => elements["Γ₁"]kᵘ,
-    ∫vᵢgᵢdΓ => elements["Γ₂"]kᵘ,
-    ∫vᵢgᵢdΓ => elements["Γ₃"]kᵘ,
-    ∫vᵢgᵢdΓ => elements["Γ₄"]kᵘ
+aᵘ = ∫∫μ∇u∇vdxdy=>elements["Ω"]
+bᵖ = ∫∫p∇udxdy=>(elements["Ω"],elements["Ωˢ"])
+fᵘ = [
+    ∫∫vᵢbᵢdxdy=>elements["Ω"],
+    ∫vᵢtᵢds=>elements["Γ₁"],
+    ∫vᵢtᵢds=>elements["Γ₂"],
+    ∫vᵢtᵢds=>elements["Γ₃"],
+    ∫vᵢtᵢds=>elements["Γ₄"]
 ]
 aᵅ = [
-    ∫vᵢgᵢdΓ => elements["Γ₁"],
-    ∫vᵢgᵢdΓ => elements["Γ₂"],
-    ∫vᵢgᵢdΓ => elements["Γ₃"],
-    ∫vᵢgᵢdΓ => elements["Γ₄"]
+    ∫vᵢgᵢds => elements["Γ₁"],
+    ∫vᵢgᵢds => elements["Γ₂"],
+    ∫vᵢgᵢds => elements["Γ₃"],
+    ∫vᵢgᵢds => elements["Γ₄"]
     ]
 
 kᵘᵘ = zeros(2*nᵘ,2*nᵘ)
-kᵘᵖ = zeros(nᵖ,2*nᵘ)
-kᵖᵖ = zeros(nᵖ,nᵖ)
+kᵘᵖ = zeros(nᵘ,2*nᵖ)
 fᵖ = zeros(nᵖ)
 fᵘ = zeros(2*nᵘ)
 d = zeros(2*nᵘ+nᵖ)
 
 aᵘ(kᵘᵘ)
-aᵖ(kᵖᵖ)
+# aᵖ(kᵖᵖ)
 bᵖ(kᵘᵖ)
 𝑎ᵅ(kᵘᵘ,fᵘ)
 f(fᵘ)
 
-k = sparse[kᵘ kᵘᵖ';kᵘᵖ kᵖ]
+k =[kᵘ kᵘᵖ';kᵘᵖ kᵖ]
 f = [fᵘ;fᵖ]
 
 d = k\f
