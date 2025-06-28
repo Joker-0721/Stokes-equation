@@ -54,8 +54,8 @@ prescribe!(elements["Γ₄"],:n₁₁=>(x,y,z,n₁,n₂)->n₁₁(n₁,n₂))
 prescribe!(elements["Γ₄"],:n₂₂=>(x,y,z,n₁,n₂)->n₂₂(n₁,n₂))
 prescribe!(elements["Γ₄"],:n₁₂=>(x,y,z)->0.0)
 
-aᵘ = ∫∫μ∇u∇vdxdy=>elements["Ω"]
-bᵖ = ∫∫p∇udxdy=>(elements["Ω"],elements["Ωˢ"])
+aᵘ = ∫∫μ∇u∇vdxdy=>(elements["Ω"];μ=μ)
+bᵖ = ∫∫p∇udxdy=>[elements["Ω"],elements["Ωˢ"]]
 fᵘ = [
     ∫∫vᵢbᵢdxdy=>elements["Ω"],
     ∫vᵢtᵢds=>elements["Γ₁"],
@@ -68,7 +68,7 @@ aᵅ = [
     ∫vᵢgᵢds => elements["Γ₂"],
     ∫vᵢgᵢds => elements["Γ₃"],
     ∫vᵢgᵢds => elements["Γ₄"]
-    ]
+]
 
 kᵘᵘ = zeros(2*nᵘ,2*nᵘ)
 kᵘᵖ = zeros(nᵘ,2*nᵖ)
