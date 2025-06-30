@@ -1,6 +1,6 @@
 using ApproxOperator
-using XLSX
-using WriteVTK ,Pardiso
+using Pardiso
+using WriteVTK ,XLSX
 using SparseArrays, LinearAlgebra
 import ApproxOperator.Stokes:∫∫μ∇u∇vdxdy
 import ApproxOperator.Elasticity:∫∫p∇udxdy, ∫vᵢtᵢds, ∫∫vᵢbᵢdxdy, ∫vᵢgᵢds
@@ -27,6 +27,7 @@ t₂ = 0.5
 
 n₁₁(n₁,n₂) = 1.0
 n₂₂(n₁,n₂) = 1.0
+prescribe!(elements["Ω"],:μ=>(x,y,z)->μ)
 prescribe!(elements["Ω"],:b₁=>(x,y,z)->b₁)
 prescribe!(elements["Ω"],:b₂=>(x,y,z)->b₂)
 prescribe!(elements["Γ₁"],:t₁=>(x,y,z)->t₁)
@@ -37,10 +38,18 @@ prescribe!(elements["Γ₃"],:t₁=>(x,y,z)->t₁)
 prescribe!(elements["Γ₃"],:t₂=>(x,y,z)->t₂)
 prescribe!(elements["Γ₄"],:t₁=>(x,y,z)->t₁)
 prescribe!(elements["Γ₄"],:t₂=>(x,y,z)->t₂)
-prescribe!(elements["Γ₁"],:g=>(x,y,z)->0.0)
-prescribe!(elements["Γ₂"],:g=>(x,y,z)->0.0)
-prescribe!(elements["Γ₃"],:g=>(x,y,z)->0.0)
-prescribe!(elements["Γ₄"],:g=>(x,y,z)->0.0)
+prescribe!(elements["Γ₁"],:g₁=>(x,y,z)->0.0)
+prescribe!(elements["Γ₂"],:g₁=>(x,y,z)->0.0)
+prescribe!(elements["Γ₃"],:g₁=>(x,y,z)->0.0)
+prescribe!(elements["Γ₄"],:g₁=>(x,y,z)->0.0)
+prescribe!(elements["Γ₁"],:g₂=>(x,y,z)->0.0)
+prescribe!(elements["Γ₂"],:g₂=>(x,y,z)->0.0)
+prescribe!(elements["Γ₃"],:g₂=>(x,y,z)->0.0)
+prescribe!(elements["Γ₄"],:g₂=>(x,y,z)->0.0)
+prescribe!(elements["Γ₁"],:α=>(x,y,z)->1e12*E)
+prescribe!(elements["Γ₂"],:α=>(x,y,z)->1e12*E)
+prescribe!(elements["Γ₃"],:α=>(x,y,z)->1e12*E)
+prescribe!(elements["Γ₄"],:α=>(x,y,z)->1e12*E)
 prescribe!(elements["Γ₁"],:n₁₁=>(x,y,z,n₁,n₂)->n₁₁(n₁,n₂))
 prescribe!(elements["Γ₁"],:n₂₂=>(x,y,z,n₁,n₂)->n₂₂(n₁,n₂))
 prescribe!(elements["Γ₁"],:n₁₂=>(x,y,z)->0.0)
@@ -54,14 +63,14 @@ prescribe!(elements["Γ₄"],:n₁₁=>(x,y,z,n₁,n₂)->n₁₁(n₁,n₂))
 prescribe!(elements["Γ₄"],:n₂₂=>(x,y,z,n₁,n₂)->n₂₂(n₁,n₂))
 prescribe!(elements["Γ₄"],:n₁₂=>(x,y,z)->0.0)
 
-aᵘ = ∫∫μ∇u∇vdxdy=>(elements["Ω"];μ=μ)
-bᵖ = ∫∫p∇udxdy=>[elements["Ω"],elements["Ωˢ"]]
-fᵘ = [
-    ∫∫vᵢbᵢdxdy=>elements["Ω"],
-    ∫vᵢtᵢds=>elements["Γ₁"],
-    ∫vᵢtᵢds=>elements["Γ₂"],
-    ∫vᵢtᵢds=>elements["Γ₃"],
-    ∫vᵢtᵢds=>elements["Γ₄"]
+aᵘ = ∫∫μ∇u∇vdxdy => elements["Ω"]
+bᵖ = ∫∫p∇udxdy => (elements["Ω"],elements["Ωˢ"])
+# kᵖ = ∫∫vᵢbᵢdxdy => elements["Ω"]
+f = [
+    ∫vᵢtᵢds => elements["Γ₁"],
+    ∫vᵢtᵢds => elements["Γ₂"],
+    ∫vᵢtᵢds => elements["Γ₃"],
+    ∫vᵢtᵢds => elements["Γ₄"]
 ]
 aᵅ = [
     ∫vᵢgᵢds => elements["Γ₁"],
@@ -71,26 +80,27 @@ aᵅ = [
 ]
 
 kᵘᵘ = zeros(2*nᵘ,2*nᵘ)
-kᵘᵖ = zeros(nᵘ,2*nᵖ)
+kᵘᵖ = zeros(nᵖ,2*nᵘ)
+kᵖᵖ = zeros(nᵖ,nᵖ)
 fᵖ = zeros(nᵖ)
 fᵘ = zeros(2*nᵘ)
 d = zeros(2*nᵘ+nᵖ)
 
 aᵘ(kᵘᵘ)
-# aᵖ(kᵖᵖ)
 bᵖ(kᵘᵖ)
-𝑎ᵅ(kᵘᵘ,fᵘ)
+# kᵖ(fᵖ)
 f(fᵘ)
+aᵅ(kᵘᵘ,fᵘ)
 
-k =[kᵘ kᵘᵖ';kᵘᵖ kᵖ]
+k =[kᵘᵘ kᵘᵖ';kᵘᵖ kᵖᵖ]
 f = [fᵘ;fᵖ]
 
-d = k\f
+# d = k\f
 set_matrixtype!(ps, -2)
 k = get_matrix(ps,k,:N)
 pardiso(ps,d,k,f)
-d₁ = d[1:3:3*nᵘ]
-d₂ = d[2:3:3*nᵘ]
+# d₁ = d[1:3:3*nᵘ]
+# d₂ = d[2:3:3*nᵘ]
 
 # u = d[1:2nᵘ]
 # p = d[2nᵘ+1:end]
