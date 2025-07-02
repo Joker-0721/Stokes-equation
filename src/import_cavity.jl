@@ -30,43 +30,56 @@ function import_cavity_RI(filename1::String,filename2::String)
     gmsh.initialize()
     gmsh.open(filename1)
 
-    integrationOrder_Ω = 3
-    integrationOrder_Ωᵍ = 10
-    integrationOrder_Γ = 3
+    integrationOrder_Ω = 2
+    integrationOrder_Ωᵍ = 8
+    integrationOrder_Γ = 2
     entities = getPhysicalGroups()
     nodes = get𝑿ᵢ()
     x = nodes.x
     y = nodes.y
     z = nodes.z
-    elements["Ω"] = getElements(nodes, entities["Ω"], integrationOrder_Ω)
-    elements["Ωᵍ"] = getElements(nodes, entities["Ω"], integrationOrder_Ωᵍ)
+    elements["Ωᵘ"] = getElements(nodes, entities["Ω"], integrationOrder_Ω)
+    elements["Ωᵍᵘ"] = getElements(nodes, entities["Ω"], integrationOrder_Ωᵍ)
     elements["Γ₁"] = getElements(nodes, entities["Γ₁"], integrationOrder_Γ,normal=true)
     elements["Γ₂"] = getElements(nodes, entities["Γ₂"], integrationOrder_Γ,normal=true)
     elements["Γ₃"] = getElements(nodes, entities["Γ₃"], integrationOrder_Γ,normal=true)
     elements["Γ₄"] = getElements(nodes, entities["Γ₄"], integrationOrder_Γ,normal=true)
     
     gmsh.open(filename2)
-    integrationOrder_Ωˢ = 0
+    integrationOrder_Ωˢ = 3
     entities = getPhysicalGroups()
-    nodes_s = get𝑿ᵢ()
-    elements["Ωˢ"] = getElements(nodes_s, entities["Ω"], integrationOrder_Ωˢ)
+    nodes_p = get𝑿ᵢ()
+    elements["Ωᵖ"] = getElements(nodes_p, entities["Ω"], integrationOrder_Ωˢ)
    
     push!(elements["Γ₁"], :𝝭)
     push!(elements["Γ₂"], :𝝭)
     push!(elements["Γ₃"], :𝝭)
     push!(elements["Γ₄"], :𝝭)
-    push!(elements["Ω"], :𝝭, :∂𝝭∂x, :∂𝝭∂y)
-    push!(elements["Ωˢ"], :𝝭, :∂𝝭∂x, :∂𝝭∂y)
+    push!(elements["Ωᵘ"], :𝝭, :∂𝝭∂x, :∂𝝭∂y)
+    push!(elements["Ωᵖ"], :𝝭, :∂𝝭∂x, :∂𝝭∂y)
+    push!(elements["Ωᵍᵘ"], :𝝭, :∂𝝭∂x, :∂𝝭∂y)
 
-    set𝝭!(elements["Ω"])
-    set∇𝝭!(elements["Ω"])
+    set∇𝝭!(elements["Ωᵘ"])
+    set∇𝝭!(elements["Ωᵍᵘ"])
+    set∇𝝭!(elements["Ωᵖ"])
     set𝝭!(elements["Γ₁"])
     set𝝭!(elements["Γ₂"])
     set𝝭!(elements["Γ₃"])
     set𝝭!(elements["Γ₄"])
 
+    # type = ReproducingKernel{:Linear3D,:□,:CubicSpline}
+    type = ReproducingKernel{:Quadratic2D,:□,:CubicSpline}
+    sp = RegularGrid(xᵖ,yᵖ,zᵖ,n = 3,γ = 5)
+    elements["Ωᵖ"] = getElements(nodes_p, entities["Ω"], type, integrationOrder_Ω, sp)
+    elements["Ωᵍᵖ"] = getElements(nodes_p, entities["Ω"], type,  integrationOrder_Ωᵍ, sp)
+    elements["Γᵍᵖ"] = getElements(nodes_p, entities["Γ₁"],type,  integrationOrder_Γ, sp, normal = true)
+    elements["Γᵍᵖ"] = getElements(nodes_p, entities["Γ₂"],type,  integrationOrder_Γ, sp, normal = true)
+    elements["Γᵍᵖ"] = getElements(nodes_p, entities["Γ₃"],type,  integrationOrder_Γ, sp, normal = true)
+    elements["Γᵍᵖ"] = getElements(nodes_p, entities["Γ₄"],type,  integrationOrder_Γ, sp, normal = true)
+
+
     gmsh.finalize()
-    return elements, nodes, nodes_s
+    return elements, nodes, nodes_p
 end
 
 function import_cavity_test(filename1::String,filename2::String)
