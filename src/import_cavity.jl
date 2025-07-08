@@ -68,14 +68,14 @@ function import_cavity_RI(filename1::String,filename2::String)
     set𝝭!(elements["Γ₄"])
 
     # type = ReproducingKernel{:Linear3D,:□,:CubicSpline}
-    type = ReproducingKernel{:Quadratic2D,:□,:CubicSpline}
-    sp = RegularGrid(xᵖ,yᵖ,zᵖ,n = 3,γ = 5)
-    elements["Ωᵖ"] = getElements(nodes_p, entities["Ω"], type, integrationOrder_Ω, sp)
-    elements["Ωᵍᵖ"] = getElements(nodes_p, entities["Ω"], type,  integrationOrder_Ωᵍ, sp)
-    elements["Γᵍᵖ"] = getElements(nodes_p, entities["Γ₁"],type,  integrationOrder_Γ, sp, normal = true)
-    elements["Γᵍᵖ"] = getElements(nodes_p, entities["Γ₂"],type,  integrationOrder_Γ, sp, normal = true)
-    elements["Γᵍᵖ"] = getElements(nodes_p, entities["Γ₃"],type,  integrationOrder_Γ, sp, normal = true)
-    elements["Γᵍᵖ"] = getElements(nodes_p, entities["Γ₄"],type,  integrationOrder_Γ, sp, normal = true)
+    # type = ReproducingKernel{:Quadratic2D,:□,:CubicSpline}
+    # sp = RegularGrid(xᵖ,yᵖ,zᵖ,n = 3,γ = 5)
+    # elements["Ωᵖ"] = getElements(nodes_p, entities["Ω"], type, integrationOrder_Ω, sp)
+    # elements["Ωᵍᵖ"] = getElements(nodes_p, entities["Ω"], type,  integrationOrder_Ωᵍ, sp)
+    # elements["Γᵍᵖ"] = getElements(nodes_p, entities["Γ₁"],type,  integrationOrder_Γ, sp, normal = true)
+    # elements["Γᵍᵖ"] = getElements(nodes_p, entities["Γ₂"],type,  integrationOrder_Γ, sp, normal = true)
+    # elements["Γᵍᵖ"] = getElements(nodes_p, entities["Γ₃"],type,  integrationOrder_Γ, sp, normal = true)
+    # elements["Γᵍᵖ"] = getElements(nodes_p, entities["Γ₄"],type,  integrationOrder_Γ, sp, normal = true)
 
 
     gmsh.finalize()

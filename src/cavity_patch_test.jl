@@ -1,7 +1,9 @@
 using ApproxOperator
-using Pardiso
+using Pardiso, TimerOutputs
 using WriteVTK ,XLSX
 using SparseArrays, LinearAlgebra
+
+# import ApproxOperator.GmshImport: getPhysicalGroups, get𝑿ᵢ, getElements
 import ApproxOperator.Stokes:∫∫μ∇u∇vdxdy
 import ApproxOperator.Elasticity:∫∫p∇udxdy, ∫vᵢtᵢds, ∫∫vᵢbᵢdxdy, ∫vᵢgᵢds, ∫qpdΩ
 
@@ -50,12 +52,12 @@ prescribe!(elements["Γ₄"],:t₁=>(x,y,z)->t₁)
 prescribe!(elements["Γ₄"],:t₂=>(x,y,z)->t₂)
 prescribe!(elements["Γ₁"],:g₁=>(x,y,z)->g₁)
 prescribe!(elements["Γ₂"],:g₁=>(x,y,z)->g₁)
-prescribe!(elements["Γ₃"],:g₁=>(x,y,z)->g₁)
-prescribe!(elements["Γ₄"],:g₁=>(x,y,z)->1.0)
+prescribe!(elements["Γ₃"],:g₁=>(x,y,z)->1.0)
+prescribe!(elements["Γ₄"],:g₁=>(x,y,z)->g₁)
 prescribe!(elements["Γ₁"],:g₂=>(x,y,z)->g₂)
 prescribe!(elements["Γ₂"],:g₂=>(x,y,z)->g₂)
 prescribe!(elements["Γ₃"],:g₂=>(x,y,z)->g₂)
-prescribe!(elements["Γ₄"],:g₂=>(x,y,z)->1.0)
+prescribe!(elements["Γ₄"],:g₂=>(x,y,z)->g₂)
 prescribe!(elements["Γ₁"],:α=>(x,y,z)->1e12*E)
 prescribe!(elements["Γ₂"],:α=>(x,y,z)->1e12*E)
 prescribe!(elements["Γ₃"],:α=>(x,y,z)->1e12*E)
@@ -124,45 +126,45 @@ d = k\f
 # end
 
 
-𝑢₁ = d[1:2:2*nᵘ]
-𝑢₂ = d[2:2:2*nᵘ]
-# 𝑢₃ = d[3:3:3*nᵘ]
-𝑝 = d[2*nᵘ+1:2*nᵘ+nᵖ]
-push!(nodes,:u₁=>𝑢₁,:u₂=>𝑢₂)
-push!(nodes_p,:p=>𝑝)
+# 𝑢₁ = d[1:2:2*nᵘ]
+# 𝑢₂ = d[2:2:2*nᵘ]
+# # 𝑢₃ = d[3:3:3*nᵘ]
+# 𝑝 = d[2*nᵘ+1:2*nᵘ+nᵖ]
+# push!(nodes,:u₁=>𝑢₁,:u₂=>𝑢₂)
+# push!(nodes_p,:p=>𝑝)
 
-colors = zeros(nᵘ)
-𝗠 = zeros(10)
-for (i,node) in enumerate(nodes)
-    x = node.x
-    y = node.y
-    indices = sp(x,y)
-    ni = length(indices)
-    𝓒 = [nodes_p[i] for i in indices]
-    data = Dict([:x=>(2,[x]),:y=>(2,[y]),:z=>(2,[z]),:𝝭=>(4,zeros(ni)),:𝗠=>(0,𝗠)])
-    ξ = 𝑿ₛ((𝑔=1,𝐺=1,𝐶=1,𝑠=0), data)
-    𝓖 = [ξ]
-    a = type(𝓒,𝓖)
-    set𝝭!(a)
-    p = 0.0
-    N = ξ[:𝝭]
-    for (k,xₖ) in enumerate(𝓒)
-        p += N[k]*xₖ.p
-    end
-    colors[i] = p
-end
-α = 1.0
-points = [[node.x+α*node.u₁ for node in nodes]';[node.y+α*node.u₂ for node in nodes]']
-cells = [MeshCell(VTKCellTypes.VTK_TETRA,[xᵢ.𝐼 for xᵢ in elm.𝓒]) for elm in elements["Ωᵘ"]]
-vtk_grid("./png/cav_mix_"*string(ndiv)*"_"*string(nᵖ),points,cells) do vtk
-    vtk["u"] = (𝑢₁,𝑢₂,𝑢₃)
-    vtk["𝑝"] = colors
-end
+# colors = zeros(nᵘ)
+# 𝗠 = zeros(10)
+# for (i,node) in enumerate(nodes)
+#     x = node.x
+#     y = node.y
+#     indices = sp(x,y)
+#     ni = length(indices)
+#     𝓒 = [nodes_p[i] for i in indices]
+#     data = Dict([:x=>(2,[x]),:y=>(2,[y]),:z=>(2,[z]),:𝝭=>(4,zeros(ni)),:𝗠=>(0,𝗠)])
+#     ξ = 𝑿ₛ((𝑔=1,𝐺=1,𝐶=1,𝑠=0), data)
+#     𝓖 = [ξ]
+#     a = type(𝓒,𝓖)
+#     set𝝭!(a)
+#     p = 0.0
+#     N = ξ[:𝝭]
+#     for (k,xₖ) in enumerate(𝓒)
+#         p += N[k]*xₖ.p
+#     end
+#     colors[i] = p
+# end
+# α = 1.0
+# points = [[node.x+α*node.u₁ for node in nodes]';[node.y+α*node.u₂ for node in nodes]']
+# cells = [MeshCell(VTKCellTypes.VTK_TETRA,[xᵢ.𝐼 for xᵢ in elm.𝓒]) for elm in elements["Ωᵘ"]]
+# vtk_grid("./png/cav_mix_"*string(ndiv)*"_"*string(nᵖ),points,cells) do vtk
+#     vtk["u"] = (𝑢₁,𝑢₂,𝑢₃)
+#     vtk["𝑝"] = colors
+# end
 
-XLSX.openxlsx("./png/cav_mix.xlsx", mode = "rw") do xf
-    sheet = xf[1]
-    for (n,u) in zip(indices,uₐ)
-        sheet["A"*string(n)] = n
-        sheet["B"*string(n)] = u
-    end
-end
+# XLSX.openxlsx("./png/cav_mix.xlsx", mode = "rw") do xf
+#     sheet = xf[1]
+#     for (n,u) in zip(indices,uₐ)
+#         sheet["A"*string(n)] = n
+#         sheet["B"*string(n)] = u
+#     end
+# end
