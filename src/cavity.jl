@@ -37,28 +37,10 @@ t₁ = 0.5
 t₂ = 0.5
 g₁ = 0.0
 g₂ = 0.0
-P = 80.0
+P = 0.0
 n₁₁ = 1.0
 n₂₂ = 1.0
 n₁₂ = 0.0
-
-# function original_test_system()
-#     k = spzeros(11, 11)
-#     f = zeros(11)
-#     for i in 1:10
-#         k[i, i] = 1.0
-#         k[i, i+1] = -1.0
-#         k[i+1, i] = -1.0
-#         k[i+1, i+1] = 1.0
-#     end
-#     k[1,1] = 1e10
-#     k[11,11] = 1e10
-#     f[11] = 1.0
-#     d = k\f
-#     return d
-# end
-
-# function fluid_system()
 
 @timeit to "calculate ∫∫μ∇u∇vdxdy" begin
     @timeit to "get elements" elements_u = getElements(nodes, entities["Ω"])
@@ -140,10 +122,6 @@ f = [fᵘ;fᵖ]
 
 @timeit to "solve" d = k\f
 
-# return d
-
-# end
-
 push!(nodes, :d=>d)
 
 elements = getElements(nodes, entities["Ω"], 10)
@@ -154,27 +132,3 @@ gmsh.finalize()
 
 println(to)
 println("L₂ error: ", L₂error)
-
-# # 主測試函數
-# function test_fluid_code()
-#     # 獲取兩個系統的結果
-#     d_original = original_test_system()
-#     d_fluid = fluid_system()
-    
-#     # 計算相對誤差 (只比較前11個自由度)
-#     n = min(11, length(d_fluid))
-#     error = norm(d_fluid[1:n] - d_original[1:n]) / norm(d_original[1:n])
-    
-#     # 判斷誤差是否在合理範圍內 (這裡設定為1e-5)
-#     tolerance = 1e-5
-#     if error < tolerance
-#         println("測試通過: 誤差值 = ", error, " < ", tolerance)
-#         return true
-#     else
-#         println("測試失敗: 誤差值 = ", error, " >= ", tolerance)
-#         return false
-#     end
-# end
-
-# # 執行測試
-# test_fluid_code()
