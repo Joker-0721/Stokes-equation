@@ -1,12 +1,11 @@
 using ApproxOperator
-using Pardiso, TimerOutputs
+using TimerOutputs
 using ApproxOperator.GmshImport: getPhysicalGroups, get𝑿ᵢ, getElements
 using WriteVTK, XLSX
 using SparseArrays, LinearAlgebra
 
 import ApproxOperator.Stokes:∫∫μ∇u∇vdxdy
-import ApproxOperator.Elasticity:∫∫p∇udxdy, ∫vᵢtᵢds, ∫∫vᵢbᵢdxdy, ∫vᵢgᵢds, ∫qpdΩ
-import ApproxOperator.Heat: L₂
+import ApproxOperator.Elasticity:∫∫p∇udxdy, ∫vᵢtᵢds, ∫∫vᵢbᵢdxdy, ∫vᵢgᵢds, ∫qpdΩ, L₂
 import Gmsh: gmsh
 
 𝑢(x,y,z) = x + y
@@ -14,14 +13,27 @@ const to = TimerOutput()
 
 gmsh.initialize()
 ndiv = 4
+ndiv_p = 4
+type_p = :(ReproducingKernel{:Linear2D,:□,:CubicSpline})
+integrationOrder = 2
 @timeit to "open msh file" gmsh.open("msh/cav_quad_"*string(ndiv)*".msh")
+@timeit to "get nodes_p" nodes_p = get𝑿ᵢ()  
+xᵖ = nodes_p.x
+yᵖ = nodes_p.y
+zᵖ = nodes_p.z
+nᵖ = length(nodes_p)
+sp = RegularGrid(xᵖ,yᵖ,zᵖ,n = 3,γ = 5)
+s = 1/ndiv_p
+s₁ = 1.5*s*ones(nᵖ)
+s₂ = 1.5*s*ones(nᵖ)
+s₃ = 1.5*s*ones(nᵖ)
+push!(nodes_p,:s₁=>s₁,:s₂=>s₂,:s₃=>s₃)
 
+@timeit to "open msh file" gmsh.open("msh/cav_quad_"*string(ndiv)*".msh")
 @timeit to "get entities" entities = getPhysicalGroups()
 @timeit to "get nodes" nodes = get𝑿ᵢ()
-@timeit to "get nodes_p" nodes_p = get𝑿ᵢ()  
-
 nᵘ = length(nodes)
-nᵖ = length(nodes_p)
+
 kᵘᵘ = zeros(2*nᵘ,2*nᵘ)
 kᵖᵘ = zeros(nᵖ,2*nᵘ)
 kᵖᵖ = zeros(nᵖ,nᵖ)
@@ -29,92 +41,40 @@ fᵖ = zeros(nᵖ)
 fᵘ = zeros(2*nᵘ)
 
 E = 1.0
-ν = 0.01
-μ = 0.5
-b₁ = 0.5
-b₂ = 0.5
-t₁ = 0.5
-t₂ = 0.5
-g₁ = 0.0
-g₂ = 0.0
-P = 0.0
-n₁₁ = 1.0
-n₂₂ = 1.0
-n₁₂ = 0.0
+ν = 0.3
+μ = 0.5*E/(1+ν)
 
-@timeit to "calculate ∫∫μ∇u∇vdxdy" begin
-    @timeit to "get elements" elements_u = getElements(nodes, entities["Ω"])
-    prescribe!(elements_u, :μ=>0.5, :b₁=>0.5, :b₂=>0.5, :E=>1.0, :ν=>1.0)
+@timeit to "assembly" begin
+    @timeit to "get elements" elements_u = getElements(nodes, entities["Ω"], integrationOrder)
+    @timeit to "get elements" elements_p = getElements(nodes_p, entities["Ω"], eval(type_p), integrationOrder, sp)
+    prescribe!(elements_u, :μ=>μ)
+    prescribe!(elements_p, :E=>E, :ν=>ν)
     @timeit to "calculate shape functions" set∇𝝭!(elements_u)
-    𝑎ᵘ = ∫∫μ∇u∇vdxdy => elements_u
-    @timeit to "assemble" 𝑎ᵘ(kᵘᵘ)
-end
-
-@timeit to "calculate ∫qpdΩ" begin
-    @timeit to "get elements" elements_p = getElements(nodes_p, entities["Ω"])
-    prescribe!(elements_p, :P=>80.0, :b₁=>0.5, :b₂=>0.5, :E=>1.0, :ν=>1.0)
-    @timeit to "calculate shape functions" set∇𝝭!(elements_p)
-    𝑎ᵖ = ∫qpdΩ => elements_p
-    @timeit to "assemble" 𝑎ᵖ(kᵖᵖ)
-end
-
-@timeit to "calculate ∫∫p∇udxdy" begin
-    @timeit to "get elements" elements_p = getElements(nodes_p, entities["Ω"])
-    @timeit to "get elements" elements_u = getElements(nodes, entities["Ω"])
-    prescribe!(elements_p, :P=>80.0, :b₁=>0.5, :b₂=>0.5, :E=>1.0, :ν=>1.0)
-    prescribe!(elements_u, :b₁=>0.5, :b₂=>0.5, :E=>1.0, :ν=>1.0)
-    @timeit to "calculate shape functions" set∇𝝭!(elements_p)
-    @timeit to "calculate shape functions" set∇𝝭!(elements_u)
-    𝑏ᵖ = ∫∫p∇udxdy => (elements_p, elements_u)
-    @timeit to "assemble" 𝑏ᵖ(kᵖᵘ)
-end
-
-@timeit to "calculate ∫∫vᵢbᵢdxdy" begin
-    @timeit to "get elements" elements_u = getElements(nodes, entities["Ω"])
-    prescribe!(elements_u, :b₁=>0.5, :b₂=>0.5, :E=>1.0, :ν=>1.0)
-    @timeit to "calculate shape functions" set𝝭!(elements_u)
+    @timeit to "calculate shape functions" set𝝭!(elements_p)
+    𝑎 = ∫∫μ∇u∇vdxdy => elements_u
+    𝑏 = ∫∫p∇udxdy=>(elements_p, elements_u)
+    𝑐 = ∫qpdΩ=>elements_p
     𝑓 = ∫∫vᵢbᵢdxdy => elements_u
-    @timeit to "assemble" 𝑓(fᵘ)
-end
-
-@timeit to "calculate ∫vᵢtᵢds" begin
-    @timeit to "get elements" elements_1 = getElements(nodes, entities["Γ₁"])
-    @timeit to "get elements" elements_2 = getElements(nodes, entities["Γ₂"])
-    @timeit to "get elements" elements_3 = getElements(nodes, entities["Γ₃"])
-    @timeit to "get elements" elements_4 = getElements(nodes, entities["Γ₄"])
-    prescribe!(elements_1, :t₁=>t₁, :t₂=>t₂)
-    prescribe!(elements_2, :t₁=>t₁, :t₂=>t₂)
-    prescribe!(elements_3, :t₁=>t₁, :t₂=>t₂)
-    prescribe!(elements_4, :t₁=>t₁, :t₂=>t₂)
-    @timeit to "calculate shape functions" set𝝭!(elements_1)
-    @timeit to "calculate shape functions" set𝝭!(elements_2)
-    @timeit to "calculate shape functions" set𝝭!(elements_3)
-    @timeit to "calculate shape functions" set𝝭!(elements_4)
-    𝑓 = ∫vᵢtᵢds => elements_1
-    𝑓 = ∫vᵢtᵢds => elements_2
-    𝑓 = ∫vᵢtᵢds => elements_3
-    𝑓 = ∫vᵢtᵢds => elements_4
-    @timeit to "assemble" 𝑓(fᵘ)
+    @timeit to "assemble" 𝑎(kᵘᵘ)
+    @timeit to "assemble" 𝑐(kᵖᵖ)
+    @timeit to "assemble" 𝑏(kᵖᵘ)
 end
 
 @timeit to "calculate ∫vᵢgᵢds" begin
-    @timeit to "get elements" elements_1 = getElements(nodes, entities["Γ₁"])
-    @timeit to "get elements" elements_2 = getElements(nodes, entities["Γ₂"])
-    @timeit to "get elements" elements_3 = getElements(nodes, entities["Γ₃"])
-    @timeit to "get elements" elements_4 = getElements(nodes, entities["Γ₄"])
-    prescribe!(elements_1, :g₁=>g₁, :g₂=>g₂, :α=>1e7*E, :n₁₁=>n₁₁, :n₂₂=>n₂₂, :n₁₂=>n₁₂)
-    prescribe!(elements_2, :g₁=>g₁, :g₂=>g₂, :α=>1e7*E, :n₁₁=>n₁₁, :n₂₂=>n₂₂, :n₁₂=>n₁₂)
-    prescribe!(elements_3, :g₁=>1.0, :g₂=>1.0, :α=>1e7*E, :n₁₁=>n₁₁, :n₂₂=>0.0, :n₁₂=>0.0)
-    prescribe!(elements_4, :g₁=>g₁, :g₂=>g₂, :α=>1e7*E, :n₁₁=>n₁₁, :n₂₂=>n₂₂, :n₁₂=>n₁₂)
+    @timeit to "get elements" elements_1 = getElements(nodes, entities["Γ₁"], integrationOrder)
+    @timeit to "get elements" elements_2 = getElements(nodes, entities["Γ₂"], integrationOrder)
+    @timeit to "get elements" elements_3 = getElements(nodes, entities["Γ₃"], integrationOrder)
+    @timeit to "get elements" elements_4 = getElements(nodes, entities["Γ₄"], integrationOrder)
+    prescribe!(elements_1, :g₁=>𝑢, :g₂=>𝑢, :α=>1e7*E, :n₁₁=>1.0, :n₂₂=>1.0, :n₁₂=>0.0)
+    prescribe!(elements_2, :g₁=>𝑢, :g₂=>𝑢, :α=>1e7*E, :n₁₁=>1.0, :n₂₂=>1.0, :n₁₂=>0.0)
+    prescribe!(elements_3, :g₁=>𝑢, :g₂=>𝑢, :α=>1e7*E, :n₁₁=>1.0, :n₂₂=>1.0, :n₁₂=>0.0)
+    prescribe!(elements_4, :g₁=>𝑢, :g₂=>𝑢, :α=>1e7*E, :n₁₁=>1.0, :n₂₂=>1.0, :n₁₂=>0.0)
     @timeit to "calculate shape functions" set𝝭!(elements_1)
     @timeit to "calculate shape functions" set𝝭!(elements_2)
     @timeit to "calculate shape functions" set𝝭!(elements_3)
     @timeit to "calculate shape functions" set𝝭!(elements_4)
-    𝑎ᵅ = ∫vᵢgᵢds => elements_1
-    𝑎ᵅ = ∫vᵢgᵢds => elements_2
-    𝑎ᵅ = ∫vᵢgᵢds => elements_3
-    𝑎ᵅ = ∫vᵢgᵢds => elements_4
-    @timeit to "assemble" 𝑎ᵅ(kᵘᵘ, fᵘ)
+    𝑎 = ∫vᵢgᵢds => elements_1∪elements_2∪elements_3∪elements_4
+    @timeit to "assemble" 𝑎(kᵘᵘ, fᵘ)
 end
 
 k =[kᵘᵘ kᵖᵘ';kᵖᵘ kᵖᵖ]
@@ -122,10 +82,10 @@ f = [fᵘ;fᵖ]
 
 @timeit to "solve" d = k\f
 
-push!(nodes, :d=>d)
+push!(nodes, :d₁=>d[1:2:2*nᵘ], :d₂=>d[2:2:2*nᵘ], :d₃=>zeros(nᵘ))
 
 elements = getElements(nodes, entities["Ω"], 10)
-prescribe!(elements, :u=>𝑢)
+prescribe!(elements, :u₁=>𝑢, :u₂=>𝑢, :u₃=>0.0)
 set∇𝝭!(elements)
 L₂error = L₂(elements)
 gmsh.finalize()
