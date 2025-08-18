@@ -8,7 +8,6 @@ import ApproxOperator.Stokes:∫∫μ∇u∇vdxdy
 import ApproxOperator.Elasticity:∫∫p∇udxdy, ∫vᵢtᵢds, ∫∫vᵢbᵢdxdy, ∫vᵢgᵢds, ∫qpdΩ, L₂
 import Gmsh: gmsh
 
-𝑢(x,y,z) = x + y
 const to = TimerOutput()
 
 gmsh.initialize()
@@ -65,10 +64,10 @@ end
     @timeit to "get elements" elements_2 = getElements(nodes, entities["Γ₂"], integrationOrder)
     @timeit to "get elements" elements_3 = getElements(nodes, entities["Γ₃"], integrationOrder)
     @timeit to "get elements" elements_4 = getElements(nodes, entities["Γ₄"], integrationOrder)
-    prescribe!(elements_1, :g₁=>𝑢, :g₂=>𝑢, :α=>1e14*E, :n₁₁=>1.0, :n₂₂=>1.0, :n₁₂=>0.0)
-    prescribe!(elements_2, :g₁=>𝑢, :g₂=>𝑢, :α=>1e14*E, :n₁₁=>1.0, :n₂₂=>1.0, :n₁₂=>0.0)
-    prescribe!(elements_3, :g₁=>𝑢, :g₂=>𝑢, :α=>1e14*E, :n₁₁=>1.0, :n₂₂=>1.0, :n₁₂=>0.0)
-    prescribe!(elements_4, :g₁=>𝑢, :g₂=>𝑢, :α=>1e14*E, :n₁₁=>1.0, :n₂₂=>1.0, :n₁₂=>0.0)
+    prescribe!(elements_1, :g₁=>0.0, :g₂=>0.0, :α=>1e14*E, :n₁₁=>1.0, :n₂₂=>1.0, :n₁₂=>0.0)
+    prescribe!(elements_2, :g₁=>0.0, :g₂=>0.0, :α=>1e14*E, :n₁₁=>1.0, :n₂₂=>1.0, :n₁₂=>0.0)
+    prescribe!(elements_3, :g₁=>1.0, :g₂=>0.0, :α=>1e14*E, :n₁₁=>1.0, :n₂₂=>0.0, :n₁₂=>0.0)
+    prescribe!(elements_4, :g₁=>0.0, :g₂=>0.0, :α=>1e14*E, :n₁₁=>1.0, :n₂₂=>1.0, :n₁₂=>0.0)
     @timeit to "calculate shape functions" set𝝭!(elements_1)
     @timeit to "calculate shape functions" set𝝭!(elements_2)
     @timeit to "calculate shape functions" set𝝭!(elements_3)
@@ -82,13 +81,48 @@ f = [fᵘ;fᵖ]
 
 @timeit to "solve" d = k\f
 
-push!(nodes, :d₁=>d[1:2:2*nᵘ], :d₂=>d[2:2:2*nᵘ], :d₃=>zeros(nᵘ))
+#push!(nodes, :d₁=>d[1:2:2*nᵘ], :d₂=>d[2:2:2*nᵘ], :d₃=>zeros(nᵘ))
 
-elements = getElements(nodes, entities["Ω"], 10)
-prescribe!(elements, :u₁=>𝑢, :u₂=>𝑢, :u₃=>0.0)
-set∇𝝭!(elements)
-L₂error = L₂(elements)
-gmsh.finalize()
+#elements = getElements(nodes, entities["Ω"], 10)
+#prescribe!(elements, :u₁=>𝑢, :u₂=>𝑢, :u₃=>0.0)
+#set∇𝝭!(elements)
+#L₂error = L₂(elements)
+#gmsh.finalize()
 
-println(to)
-println("L₂ error: ", L₂error)
+#println(to)
+#println("L₂ error: ", L₂error)
+
+#以下是未改好的VTK輸出
+colors = zeros(nᵘ)
+𝗠 = zeros(10)
+for (i,node) in enumerate(nodes)
+    x = node.x
+    y = node.y
+    z = node.z
+    indices = sp(x,y,z)
+    ni = length(indices)
+    𝓒 = [nodes_p[i] for i in indices]
+    data = Dict([:x=>(2,[x]),:y=>(2,[y]),:z=>(2,[z]),:𝝭=>(4,zeros(ni)),:𝗠=>(0,𝗠)])
+    ξ = 𝑿ₛ((𝑔=1,𝐺=1,𝐶=1,𝑠=0), data)
+    𝓖 = [ξ]
+    a = type(𝓒,𝓖)
+    set𝝭!(a)
+    p = 0.0
+    N = ξ[:𝝭]
+    for (k,xₖ) in enumerate(𝓒)
+        p += N[k]*xₖ.p
+    end
+    colors[i] = p
+end
+α = 1.0
+points = [[node.x+α*node.u₁ for node in nodes]';[node.y+α*node.u₂ for node in nodes]';[node.z+α*node.u₃ for node in nodes]']
+# cells = [MeshCell(VTKCellTypes.VTK_TETRA,[xᵢ.𝐼 for xᵢ in elm.𝓒]) for elm in elements["Ωᵘ"]]
+cells = [MeshCell(VTKCellTypes.VTK_HEXAHEDRON,[xᵢ.𝐼 for xᵢ in elm.𝓒]) for elm in elements["Ωᵘ"]]
+vtk_grid("./vtk/block_"*poly*"_"*string(ndiv)*"_"*string(nₚ),points,cells) do vtk
+    vtk["u"] = (𝑢₁,𝑢₂,𝑢₃)
+    vtk["𝑝"] = colors
+end
+
+println(nodes[5])
+
+show(to)
