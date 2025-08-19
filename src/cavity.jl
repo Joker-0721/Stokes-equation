@@ -8,7 +8,6 @@ import ApproxOperator.Stokes:∫∫μ∇u∇vdxdy
 import ApproxOperator.Elasticity:∫∫p∇udxdy, ∫vᵢtᵢds, ∫∫vᵢbᵢdxdy, ∫vᵢgᵢds, ∫qpdΩ, L₂
 import Gmsh: gmsh
 
-𝑢(x,y,z) = x + y
 const to = TimerOutput()
 
 gmsh.initialize()
@@ -65,10 +64,10 @@ end
     @timeit to "get elements" elements_2 = getElements(nodes, entities["Γ₂"], integrationOrder)
     @timeit to "get elements" elements_3 = getElements(nodes, entities["Γ₃"], integrationOrder)
     @timeit to "get elements" elements_4 = getElements(nodes, entities["Γ₄"], integrationOrder)
-    prescribe!(elements_1, :g₁=>𝑢, :g₂=>𝑢, :α=>1e14*E, :n₁₁=>1.0, :n₂₂=>1.0, :n₁₂=>0.0)
-    prescribe!(elements_2, :g₁=>𝑢, :g₂=>𝑢, :α=>1e14*E, :n₁₁=>1.0, :n₂₂=>1.0, :n₁₂=>0.0)
-    prescribe!(elements_3, :g₁=>𝑢, :g₂=>𝑢, :α=>1e14*E, :n₁₁=>1.0, :n₂₂=>1.0, :n₁₂=>0.0)
-    prescribe!(elements_4, :g₁=>𝑢, :g₂=>𝑢, :α=>1e14*E, :n₁₁=>1.0, :n₂₂=>1.0, :n₁₂=>0.0)
+    prescribe!(elements_1, :g₁=>0.0, :g₂=>0.0, :α=>1e14*E, :n₁₁=>1.0, :n₂₂=>1.0, :n₁₂=>0.0)
+    prescribe!(elements_2, :g₁=>0.0, :g₂=>0.0, :α=>1e14*E, :n₁₁=>1.0, :n₂₂=>1.0, :n₁₂=>0.0)
+    prescribe!(elements_3, :g₁=>1.0, :g₂=>0.0, :α=>1e14*E, :n₁₁=>1.0, :n₂₂=>1.0, :n₁₂=>0.0)
+    prescribe!(elements_4, :g₁=>0.0, :g₂=>0.0, :α=>1e14*E, :n₁₁=>1.0, :n₂₂=>1.0, :n₁₂=>0.0)
     @timeit to "calculate shape functions" set𝝭!(elements_1)
     @timeit to "calculate shape functions" set𝝭!(elements_2)
     @timeit to "calculate shape functions" set𝝭!(elements_3)
@@ -82,13 +81,28 @@ f = [fᵘ;fᵖ]
 
 @timeit to "solve" d = k\f
 
-push!(nodes, :d₁=>d[1:2:2*nᵘ], :d₂=>d[2:2:2*nᵘ], :d₃=>zeros(nᵘ))
+𝑢₁ = d[1:2:2*nᵘ]
+𝑢₂ = d[2:2:2*nᵘ]
+# 𝑢₃ = d[3:3:3*nᵘ]
+𝑝 = d[2*nᵘ+1:2*nᵘ+nᵖ]
 
-elements = getElements(nodes, entities["Ω"], 10)
-prescribe!(elements, :u₁=>𝑢, :u₂=>𝑢, :u₃=>0.0)
-set∇𝝭!(elements)
-L₂error = L₂(elements)
+push!(nodes, :d₁=>d[1:2:2*nᵘ], :d₂=>d[2:2:2*nᵘ], :d₃=>zeros(nᵘ))
+push!(nodes_p,:p=>𝑝)
+
 gmsh.finalize()
 
+points = zeros(3, nᵖ)
+for node in nodes
+    I = node.𝐼
+    points[1,I] = node.x
+    points[2,I] = node.y
+    points[3,I] = node.z
+end
+# cells = [MeshCell(VTKCellTypes.VTK_TRIANGLE, [node.𝐼 for node in elm.𝓒]) for elm in elements]
+cells = [MeshCell(VTKCellTypes.VTK_TRIANGLE_STRIP, [node.𝐼 for node in elm.𝓒]) for elm in elements]
+vtk_grid("vtk/square.vtu", points, cells) do vtk
+    vtk["u"] = (𝑢₁,𝑢₂,𝑢₃)
+    vtk["𝑝"] = colors
+end
+
 println(to)
-println("L₂ error: ", L₂error)
