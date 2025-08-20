@@ -81,28 +81,45 @@ f = [fᵘ;fᵖ]
 
 @timeit to "solve" d = k\f
 
-𝑢₁ = d[1:2:2*nᵘ]
-𝑢₂ = d[2:2:2*nᵘ]
-# 𝑢₃ = d[3:3:3*nᵘ]
-𝑝 = d[2*nᵘ+1:2*nᵘ+nᵖ]
+#push!(nodes, :d₁=>d[1:2:2*nᵘ], :d₂=>d[2:2:2*nᵘ], :d₃=>zeros(nᵘ))
 
-push!(nodes, :d₁=>d[1:2:2*nᵘ], :d₂=>d[2:2:2*nᵘ], :d₃=>zeros(nᵘ))
-push!(nodes_p,:p=>𝑝)
-
+#elements = getElements(nodes, entities["Ω"], 10)
+#prescribe!(elements, :u₁=>𝑢, :u₂=>𝑢, :u₃=>0.0)
+#set∇𝝭!(elements)
+#L₂error = L₂(elements)
 gmsh.finalize()
 
-points = zeros(3, nᵖ)
-for node in nodes
-    I = node.𝐼
-    points[1,I] = node.x
-    points[2,I] = node.y
-    points[3,I] = node.z
+println(to)
+#println("L₂ error: ", L₂error)
+
+pressure = zeros(nᵘ)
+𝗠 = zeros(10)
+for (i,node) in enumerate(nodes)
+    x = node.x
+    y = node.y
+    z = node.z
+    indices = sp(x,y,z)
+    ni = length(indices)
+    𝓒 = [nodes_p[i] for i in indices]
+    data = Dict([:x=>(2,[x]),:y=>(2,[y]),:z=>(2,[z]),:𝝭=>(4,zeros(ni)),:𝗠=>(0,𝗠)])
+    ξ = 𝑿ₛ((𝑔=1,𝐺=1,𝐶=1,𝑠=0), data)
+    𝓖 = [ξ]
+    a = type(𝓒,𝓖)
+    set𝝭!(a)
+    p = 0.0
+    N = ξ[:𝝭]
+    for (k,xₖ) in enumerate(𝓒)
+        p += N[k]*xₖ.p
+    end
+    pressure[i] = p
 end
-# cells = [MeshCell(VTKCellTypes.VTK_TRIANGLE, [node.𝐼 for node in elm.𝓒]) for elm in elements]
-cells = [MeshCell(VTKCellTypes.VTK_TRIANGLE_STRIP, [node.𝐼 for node in elm.𝓒]) for elm in elements]
-vtk_grid("vtk/square.vtu", points, cells) do vtk
+α = 1.0
+points = [[node.x+α*node.u₁ for node in nodes]';[node.y+α*node.u₂ for node in nodes]';[node.z+α*node.u₃ for node in nodes]']
+cells = [MeshCell(VTKCellTypes.VTK_TRIANGLE,[xᵢ.𝐼 for xᵢ in elm.𝓒]) for elm in elements["Ωᵘ"]]
+# cells = [MeshCell(VTKCellTypes.VTK_HEXAHEDRON,[xᵢ.𝐼 for xᵢ in elm.𝓒]) for elm in elements["Ωᵘ"]]
+vtk_grid("./vtk/cavity_"*poly*"_"*string(ndiv)*"_"*string(nₚ),points,cells) do vtk
     vtk["u"] = (𝑢₁,𝑢₂,𝑢₃)
-    vtk["𝑝"] = colors
+    vtk["p"] = pressure
 end
 
-println(to)
+# println(nodes[5])
