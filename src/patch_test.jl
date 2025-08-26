@@ -11,11 +11,12 @@ import Gmsh: gmsh
 const to = TimerOutput()
 
 gmsh.initialize()
-ndiv = 4
-ndiv_p = 4
+type = "quad"
+ndiv_u = 10
+ndiv_p = 1
 type_p = :(ReproducingKernel{:Linear2D,:□,:CubicSpline})
 integrationOrder = 2
-@timeit to "open msh file" gmsh.open("msh/cav_quad_"*string(ndiv)*".msh")
+@timeit to "open msh file" gmsh.open("msh/cav_quad_"*string(ndiv_p)*".msh")
 @timeit to "get nodes_p" nodes_p = get𝑿ᵢ()  
 xᵖ = nodes_p.x
 yᵖ = nodes_p.y
@@ -28,7 +29,7 @@ s₂ = 1.5*s*ones(nᵖ)
 s₃ = 1.5*s*ones(nᵖ)
 push!(nodes_p,:s₁=>s₁,:s₂=>s₂,:s₃=>s₃)
 
-@timeit to "open msh file" gmsh.open("msh/cav_quad_"*string(ndiv)*".msh")
+@timeit to "open msh file" gmsh.open("msh/cav_quad_"*string(ndiv_u)*".msh")
 @timeit to "get entities" entities = getPhysicalGroups()
 @timeit to "get nodes" nodes = get𝑿ᵢ()
 nᵘ = length(nodes)
@@ -81,13 +82,55 @@ f = [fᵘ;fᵖ]
 
 @timeit to "solve" d = k\f
 
-push!(nodes, :d₁=>d[1:2:2*nᵘ], :d₂=>d[2:2:2*nᵘ], :d₃=>zeros(nᵘ))
+push!(nodes, :d₁=>d[1:2:2*nᵘ], :d₂=>d[2:2:2*nᵘ])
+push!(nodes_p, :p=>d[2*nᵘ+1:end])
 
-elements = getElements(nodes, entities["Ω"], 10)
-prescribe!(elements, :u₁=>𝑢, :u₂=>𝑢, :u₃=>0.0)
-set∇𝝭!(elements)
-L₂error = L₂(elements)
+elements = getElements(nodes, entities["Ω"])
+#set∇𝝭!(elements)
+#L₂error = L₂(elements)
 gmsh.finalize()
 
 println(to)
-println("L₂ error: ", L₂error)
+#println("L₂ error: ", L₂error)
+
+pressure = zeros(nᵘ)
+u₁ = zeros(nᵘ)
+u₂ = zeros(nᵘ)
+u₃ = zeros(nᵘ)
+𝗠 = zeros(10)
+for (i,node) in enumerate(nodes)
+    x = node.x
+    y = node.y
+    z = node.z
+    indices = sp(x,y,z)
+    ni = length(indices)
+    𝓒 = [nodes_p[i] for i in indices]
+    data = Dict([:x=>(2,[x]),:y=>(2,[y]),:z=>(2,[z]),:𝝭=>(4,zeros(ni)),:𝗠=>(0,𝗠)])
+    ξ = 𝑿ₛ((𝑔=1,𝐺=1,𝐶=1,𝑠=0), data)
+    𝓖 = [ξ]
+    a = eval(type_p)(𝓒,𝓖)
+    set𝝭!(a)
+    p = 0.0
+    N = ξ[:𝝭]
+    for (k,xₖ) in enumerate(𝓒)
+        p += N[k]*xₖ.p
+    end
+    pressure[i] = p
+    u₁[i] = node.d₁
+    u₂[i] = node.d₂
+end
+α = 1.0
+points = zeros(3, nᵘ)
+for node in nodes
+    I = node.𝐼
+    points[1, I] = node.x
+    points[2, I] = node.y
+    points[3, I] = node.z
+end
+cells = [MeshCell(VTKCellTypes.VTK_QUAD,[xᵢ.𝐼 for xᵢ in elm.𝓒]) for elm in elements]
+# cells = [MeshCell(VTKCellTypes.VTK_TRIANGLE,[xᵢ.𝐼 for xᵢ in elm.𝓒]) for elm in elements]
+# cells = [MeshCell(VTKCellTypes.VTK_HEXAHEDRON,[xᵢ.𝐼 for xᵢ in elm.𝓒]) for elm in elements["Ωᵘ"]]
+vtk_grid("./vtk/cavity_"*type*"_"*string(ndiv_u)*"_"*string(nᵖ),points,cells) do vtk
+    vtk["u"] = (u₁,u₂,u₃)
+    vtk["p"] = pressure
+end

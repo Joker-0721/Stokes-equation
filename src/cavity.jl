@@ -12,8 +12,8 @@ const to = TimerOutput()
 
 gmsh.initialize()
 type = "quad"
-ndiv_u = 4
-ndiv_p = 1
+ndiv_u = 10
+ndiv_p = 2
 type_p = :(ReproducingKernel{:Linear2D,:□,:CubicSpline})
 integrationOrder = 2
 @timeit to "open msh file" gmsh.open("msh/cav_"*type*"_"*string(ndiv_p)*".msh")
@@ -41,15 +41,15 @@ kᵖᵖ = zeros(nᵖ,nᵖ)
 fᵖ = zeros(nᵖ)
 fᵘ = zeros(2*nᵘ)
 
-E = 1.0
-ν = 0.3
-μ = 0.5*E/(1+ν)
+# E = 1.0
+# ν = 0.3
+μ = 0.01
 
 @timeit to "assembly" begin
     @timeit to "get elements" elements_u = getElements(nodes, entities["Ω"], integrationOrder)
     @timeit to "get elements" elements_p = getElements(nodes_p, entities["Ω"], eval(type_p), integrationOrder, sp)
     prescribe!(elements_u, :μ=>μ)
-    prescribe!(elements_p, :E=>E, :ν=>ν)
+    prescribe!(elements_p)
     @timeit to "calculate shape functions" set∇𝝭!(elements_u)
     @timeit to "calculate shape functions" set𝝭!(elements_p)
     𝑎 = ∫∫μ∇u∇vdxdy => elements_u
@@ -57,7 +57,7 @@ E = 1.0
     𝑐 = ∫qpdΩ=>elements_p
     𝑓 = ∫∫vᵢbᵢdxdy => elements_u
     @timeit to "assemble" 𝑎(kᵘᵘ)
-    @timeit to "assemble" 𝑐(kᵖᵖ)
+    # @timeit to "assemble" 𝑐(kᵖᵖ)
     @timeit to "assemble" 𝑏(kᵖᵘ)
 end
 
