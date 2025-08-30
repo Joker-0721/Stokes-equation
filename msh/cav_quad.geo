@@ -1,5 +1,5 @@
 // 定义网格参数
-n = 2.5;  // 基础划分参数
+n = 64;  // 基础划分参数
 
 // 1. 定义几何实体（点→线→面）
 Point(1) = {0, 0, 0};
@@ -16,8 +16,8 @@ Curve Loop(1) = {1, 2, 3, 4};
 Plane Surface(1) = {1};
 
 // 2. 配置结构化网格
-Transfinite Curve{1,3} = 2*n+1;  // 水平方向9节点
-Transfinite Curve{2,4} = 2*n+1;  // 垂直方向9节点
+Transfinite Curve{1,3} = n+1;  // 水平方向9节点
+Transfinite Curve{2,4} = n+1;  // 垂直方向9节点
 Transfinite Surface{1};
 Recombine Surface{1};
 
@@ -35,4 +35,4 @@ Geometry.AutoCoherence = 1;  // 自动同步几何实体
 
 // 5. 生成并保存网格
 Mesh 2;
-Save "cav_quad_2.5.msh";
+Save "cav_quad_64.msh";

@@ -13,7 +13,7 @@ const to = TimerOutput()
 gmsh.initialize()
 type = "quad"
 ndiv_u = 10
-ndiv_p = 2
+ndiv_p = 4
 type_p = :(ReproducingKernel{:Linear2D,:□,:CubicSpline})
 integrationOrder = 2
 @timeit to "open msh file" gmsh.open("msh/cav_"*type*"_"*string(ndiv_p)*".msh")
@@ -54,7 +54,7 @@ fᵘ = zeros(2*nᵘ)
     @timeit to "calculate shape functions" set𝝭!(elements_p)
     𝑎 = ∫∫μ∇u∇vdxdy => elements_u
     𝑏 = ∫∫p∇udxdy=>(elements_p, elements_u)
-    𝑐 = ∫qpdΩ=>elements_p
+    # 𝑐 = ∫qpdΩ=>elements_p
     𝑓 = ∫∫vᵢbᵢdxdy => elements_u
     @timeit to "assemble" 𝑎(kᵘᵘ)
     # @timeit to "assemble" 𝑐(kᵖᵖ)
@@ -66,10 +66,10 @@ end
     @timeit to "get elements" elements_2 = getElements(nodes, entities["Γ₂"], integrationOrder)
     @timeit to "get elements" elements_3 = getElements(nodes, entities["Γ₃"], integrationOrder)
     @timeit to "get elements" elements_4 = getElements(nodes, entities["Γ₄"], integrationOrder)
-    prescribe!(elements_1, :g₁=>0.0, :g₂=>0.0, :α=>1e14*E, :n₁₁=>1.0, :n₂₂=>1.0, :n₁₂=>0.0)
-    prescribe!(elements_2, :g₁=>0.0, :g₂=>0.0, :α=>1e14*E, :n₁₁=>1.0, :n₂₂=>1.0, :n₁₂=>0.0)
-    prescribe!(elements_3, :g₁=>1.0, :g₂=>0.0, :α=>1e14*E, :n₁₁=>1.0, :n₂₂=>0.0, :n₁₂=>0.0)
-    prescribe!(elements_4, :g₁=>0.0, :g₂=>0.0, :α=>1e14*E, :n₁₁=>1.0, :n₂₂=>1.0, :n₁₂=>0.0)
+    prescribe!(elements_1, :g₁=>0.0, :g₂=>0.0, :α=>1e14, :n₁₁=>-1.0, :n₂₂=>1.0, :n₁₂=>0.0)
+    prescribe!(elements_2, :g₁=>0.0, :g₂=>0.0, :α=>1e14, :n₁₁=>1.0, :n₂₂=>0.0, :n₁₂=>0.0)
+    prescribe!(elements_3, :g₁=>1.0, :g₂=>0.0, :α=>1e14, :n₁₁=>1.0, :n₂₂=>1.0, :n₁₂=>0.0)
+    prescribe!(elements_4, :g₁=>0.0, :g₂=>0.0, :α=>1e14, :n₁₁=>1.0, :n₂₂=>0.0, :n₁₂=>0.0)
     @timeit to "calculate shape functions" set𝝭!(elements_1)
     @timeit to "calculate shape functions" set𝝭!(elements_2)
     @timeit to "calculate shape functions" set𝝭!(elements_3)
