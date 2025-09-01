@@ -1,46 +1,96 @@
-// 定义网格大小控制参数 n
-n = 10; // 可通过调整此值控制网格大小，n越大网格越密
 
-// 使用 OpenCASCADE 内核进行几何建模，便于使用布尔操作
-SetFactory("OpenCASCADE");
+a = 0.5;
+b = 4.0;
+c = 1.5;
+n = 6;
 
-// 正方形参数：边长设为 1，中心在原点 (0,0)
-square_size = 1;
-// 圆形参数：半径为正方形边长的 1/2
-circle_radius = square_size / 4; // 直径为边长 1/2，故半径为其 1/4
-circle_x = 0; // 圆心 x 坐标
-circle_y = 0; // 圆心 y 坐标
+Point(1) = {0.0, 0.0, 0.0};
+Point(2) = {  -a, 0.0, 0.0};
+Point(3) = {  -b, 0.0, 0.0};
+Point(4) = {  -b,   b, 0.0};
+Point(5) = {0.0,   b, 0.0};
+Point(6) = {0.0,   a, 0.0};
+Point(7) = {  -c, 0.0, 0.0};
+Point(8) = {0.0,   c, 0.0};
+Point(9) = {  -b, 2^0.5/2*c, 0.0};
+Point(10) = {-2^0.5/2*c, b, 0.0};
+Point(11) = {-2^0.5/2*a, 2^0.5/2*a, 0.0};
+Point(12) = {-2^0.5/2*c, 2^0.5/2*c, 0.0};
+Point(13) = {  a, 0.0, 0.0};
+Point(14) = {  b, 0.0, 0.0};
+Point(15) = {  b,   b, 0.0};
+Point(16) = {  c, 0.0, 0.0};
+Point(17) = {  b, 2^0.5/2*c, 0.0};
+Point(18) = {2^0.5/2*c, b, 0.0};
+Point(19) = {2^0.5/2*a, 2^0.5/2*a, 0.0};
+Point(20) = {2^0.5/2*c, 2^0.5/2*c, 0.0};
 
-// 创建正方形曲面
-Rectangle(1) = {-square_size/2, -square_size/2, 0, square_size, square_size};
+Line(1) = {2,7};
+Line(2) = {7,3};
+Line(3) = {3,9};
+Line(4) = {9,4};
+Line(5) = {4,10};
+Line(6) = {10,5};
+Line(7) = {5,8};
+Line(8) = {8,6};
+Circle(9) = {6,1,11};
+Circle(10) = {11,1,2};
+Circle(11) = {7,1,12};
+Circle(12) = {12,1,8};
+Line(13) = {11,12};
+Line(14) = {12,9};
+Line(15) = {10,12};
+Line(16) = {13,16};
+Line(17) = {16,14};
+Line(18) = {14,17};
+Line(19) = {17,15};
+Line(20) = {15,18};
+Line(21) = {18,5};
+Circle(22) = {13,1,19};
+Circle(23) = {19,1,6};
+Circle(24) = {16,1,20};
+Circle(25) = {20,1,8};
+Line(26) = {19,20};
+Line(27) = {20,18};
+Line(28) = {20,17};
 
-// 创建圆形曲线（使用完整的圆）
-Disk(2) = {circle_x, circle_y, 0, circle_radius, circle_radius};
+Curve Loop(1) = {9,13,12,8};
+Curve Loop(2) = {10,1,11,-13};
+Curve Loop(3) = {-12,-15,6,7};
+Curve Loop(4) = {11,14,-3,-2};
+Curve Loop(5) = {14,4,5,15};
+Curve Loop(6) = {23,-8,-25,-26};
+Curve Loop(7) = {22,26,-24,-16};
+Curve Loop(8) = {25,-27,-21,-7};
+Curve Loop(9) = {24,-17,-18,28};
+Curve Loop(10) = {-28,-19,-20,27};
 
-// 进行布尔差集操作，从正方形中减去圆形区域，形成带孔的正方形
-BooleanDifference(3) = { Surface{1}; Delete; } { Surface{2}; Delete; };
+Plane Surface(1) = {1};
+Plane Surface(2) = {2};
+Plane Surface(3) = {3};
+Plane Surface(4) = {4};
+Plane Surface(5) = {5};
+Plane Surface(6) = {6};
+Plane Surface(7) = {7};
+Plane Surface(8) = {8};
+Plane Surface(9) = {9};
+Plane Surface(10) = {10};
+Physical Surface("Ω") = {1,2,3,4,5,6,7,8,9,10};
+Physical Curve("Γ₁") = {1,2,5,6,16,17,20,21};
+Physical Curve("Γ₂") = {3,4,18,19};
+Physical Curve("Γ₃") = {9,10,22,23};
+Transfinite Curve{1,3,6,8,9,10,11,12,13,16,18,21,22,23,24,25,26} = n+1;
+Transfinite Curve{2,4,5,7,14,15,17,19,20,27,28} = 2*n+1;
+Transfinite Surface{1,3,5,7,8,10};
+Transfinite Surface{2,4,6,9} Right;
 
-// 定义物理曲线（边界条件）
-// 获取正方形外边界曲线
-Curve Loop(1) = {1, 2, 3, 4}; // 假设布尔操作后外边界曲线标签为 1, 2, 3, 4
-Physical Curve("Γ₁") = {1};  // 底部
-Physical Curve("Γ₂") = {2};  // 右侧
-Physical Curve("Γ₃") = {3};  // 顶部（移动壁面）
-Physical Curve("Γ₄") = {4};  // 左侧
-
-// 定义圆形孔洞的边界曲线
-// 获取圆形内部边界曲线（布尔操作后生成的新曲线）
-Curve Loop(2) = {5}; // 假设圆形边界曲线标签为 5
-Physical Curve("Γ₅") = {5}; // 假设圆形边界曲线标签为 5
-
-// 定义计算域的物理曲面（带孔的正方形区域）
-Physical Surface("Ω") = {3};
-
-// 设置全局网格尺寸因子
-MeshSizeFactor = 1/n; // 根据 n 调整网格大小
-
-// 生成二维网格
+Mesh.Algorithm = 1;
+// Mesh.MshFileVersion = 2;
+// Mesh.Renumber = 0;
 Mesh 2;
+// RefineMesh;
+// RecombineMesh;
+// SetOrder 2;
+// Mesh.SecondOrderIncomplete = 1;
 
-// 可选：保存网格文件
-Save"cylinder_tri_10.msh";
+Save "cylinder_tri_6.msh";
