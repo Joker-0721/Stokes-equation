@@ -13,7 +13,7 @@ const to = TimerOutput()
 gmsh.initialize()
 # type = "quad"
 type = "tri"
-ndiv_u = 6
+ndiv_u = 10
 ndiv_p = 2
 type_p = :(ReproducingKernel{:Linear2D,:□,:CubicSpline})
 integrationOrder = 2
@@ -42,15 +42,15 @@ kᵖᵖ = zeros(nᵖ,nᵖ)
 fᵖ = zeros(nᵖ)
 fᵘ = zeros(2*nᵘ)
 
-# E = 1.0
-# ν = 0.3
+E = 1.0
+ν = 0.3
 μ = 0.01
 
 @timeit to "assembly" begin
     @timeit to "get elements" elements_u = getElements(nodes, entities["Ω"], integrationOrder)
     @timeit to "get elements" elements_p = getElements(nodes_p, entities["Ω"], eval(type_p), integrationOrder, sp)
     prescribe!(elements_u, :μ=>μ)
-    prescribe!(elements_p)
+    prescribe!(elements_p, :E=>E, :ν=>ν)
     @timeit to "calculate shape functions" set∇𝝭!(elements_u)
     @timeit to "calculate shape functions" set𝝭!(elements_p)
     𝑎 = ∫∫μ∇u∇vdxdy => elements_u
@@ -66,13 +66,19 @@ end
     @timeit to "get elements" elements_1 = getElements(nodes, entities["Γ₁"], integrationOrder)
     @timeit to "get elements" elements_2 = getElements(nodes, entities["Γ₂"], integrationOrder)
     @timeit to "get elements" elements_3 = getElements(nodes, entities["Γ₃"], integrationOrder)
+    @timeit to "get elements" elements_4 = getElements(nodes, entities["Γ₄"], integrationOrder)
+    @timeit to "get elements" elements_5 = getElements(nodes, entities["Γ₅"], integrationOrder)
     prescribe!(elements_1, :g₁=>0.0, :g₂=>0.0, :α=>1e14, :n₁₁=>0.0, :n₂₂=>1.0, :n₁₂=>0.0)
     prescribe!(elements_2, :g₁=>1.0, :g₂=>0.0, :α=>1e14, :n₁₁=>1.0, :n₂₂=>1.0, :n₁₂=>0.0)
-    prescribe!(elements_3, :g₁=>0.0, :g₂=>0.0, :α=>1e14, :n₁₁=>0.0, :n₂₂=>0.0, :n₁₂=>1.0)
+    prescribe!(elements_3, :g₁=>0.0, :g₂=>0.0, :α=>1e14, :n₁₁=>1.0, :n₂₂=>1.0, :n₁₂=>0.0)
+    prescribe!(elements_4, :g₁=>0.0, :g₂=>0.0, :α=>1e14, :n₁₁=>1.0, :n₂₂=>1.0, :n₁₂=>0.0)
+    prescribe!(elements_5, :g₁=>0.0, :g₂=>0.0, :α=>1e14, :n₁₁=>0.0, :n₂₂=>1.0, :n₁₂=>0.0)
     @timeit to "calculate shape functions" set𝝭!(elements_1)
     @timeit to "calculate shape functions" set𝝭!(elements_2)
     @timeit to "calculate shape functions" set𝝭!(elements_3)
-    𝑎 = ∫vᵢgᵢds => elements_1∪elements_2∪elements_3
+    @timeit to "calculate shape functions" set𝝭!(elements_4)
+    @timeit to "calculate shape functions" set𝝭!(elements_5)
+    𝑎 = ∫vᵢgᵢds => elements_1∪elements_2∪elements_3∪elements_4∪elements_5
     @timeit to "assemble" 𝑎(kᵘᵘ, fᵘ)
 end
 
@@ -126,6 +132,51 @@ for node in nodes
     points[2, I] = node.y
     points[3, I] = node.z
 end
+
+# # 在构建 cells 数组之前，先检查单元节点类型
+# println("正在检查单元节点类型...")
+# node_counts = Dict{Int, Int}() # 创建一个字典来统计不同节点数的单元数量
+
+# # 首先，遍历所有单元，统计每个单元的节点数
+# for elm in elements
+#     n_nodes = length(elm.𝓒) # 获取当前单元的节点数量
+#     # 统计不同节点数出现的次数
+#     node_counts[n_nodes] = get(node_counts, n_nodes, 0) + 1
+# end
+
+# # 打印统计信息
+# for (n_nodes, count) in node_counts
+#     println("具有 $n_nodes 个节点的单元数量: $count")
+# end
+
+# # 定义一个函数，根据节点数量确定 VTK 单元类型
+# function get_vtk_cell_type(n_nodes)
+#     if n_nodes == 3
+#         return VTKCellTypes.VTK_TRIANGLE
+#     elseif n_nodes == 4
+#         # 可能是四边形(QUAD)或四面体(TETRA)，需要根据你的网格类型判断
+#         # 这里是二维网格的例子，假设是四边形
+#         return VTKCellTypes.VTK_QUAD
+#     elseif n_nodes == 8
+#         return VTKCellTypes.VTK_HEXAHEDRON
+#     # 可以根据需要添加更多的映射关系
+#     else
+#         error("不支持的单元节点数量: $n_nodes. 无法映射到已知的 VTK 单元类型。")
+#     end
+# end
+
+# # 现在构建 cells 数组，并对每个单元进行检查
+# cells = MeshCell{VTKCellType}[]
+# for elm in elements
+#     n_nodes = length(elm.𝓒)
+#     vtk_cell_type = get_vtk_cell_type(n_nodes)
+#     # 也可以在这里打印或记录个别单元的信息（如果怀疑某个单元有问题）
+#     # println("单元节点索引: ", [xᵢ.𝐼 for xᵢ in elm.𝓒], " 类型: ", vtk_cell_type)
+#     push!(cells, MeshCell(vtk_cell_type, [xᵢ.𝐼 for xᵢ in elm.𝓒]))
+# end
+
+# println("单元类型检查完毕，开始写入 VTK...")
+
 # cells = [MeshCell(VTKCellTypes.VTK_QUAD,[xᵢ.𝐼 for xᵢ in elm.𝓒]) for elm in elements]
 # cells = [MeshCell(VTKCellTypes.VTK_TETRA,[xᵢ.𝐼 for xᵢ in elm.𝓒]) for elm in elements]
 cells = [MeshCell(VTKCellTypes.VTK_TRIANGLE,[xᵢ.𝐼 for xᵢ in elm.𝓒]) for elm in elements]

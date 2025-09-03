@@ -2,10 +2,10 @@ using ApproxOperator, GLMakie
 
 import Gmsh: gmsh
 
-ndiv = 10
-type = "quad"
+ndiv = 2
+type = "tri"
 gmsh.initialize()
-gmsh.open("./msh/cav_"*type*"_"*string(ndiv)*".msh")
+gmsh.open("./msh/cylinder_"*type*"_"*string(ndiv)*".msh")
 # gmsh.open("./msh/Non-uniform/RefineMesh_1.0/Tri6_"*string(ndiv)*".msh")
 # gmsh.open("./msh/Non-uniform/局部加密/Tri3_"*string(ndiv)*".msh")
 # gmsh.open("./msh/b=2/Tri3反向"*string(ndiv)*".msh")
@@ -23,11 +23,12 @@ elements["Γ₁"] = getElements(nodes,entities["Γ₁"])
 elements["Γ₂"] = getElements(nodes,entities["Γ₂"])
 elements["Γ₃"] = getElements(nodes,entities["Γ₃"])
 elements["Γ₄"] = getElements(nodes,entities["Γ₄"])
+elements["Γ₅"] = getElements(nodes,entities["Γ₅"])
 # elements["Γᵗ"] = getElements(nodes,entities["Γᵗ"])
 # elements["Γᵍ"] = getElements(nodes,entities["Γᵍ"])
 # elements["∂Ω"] = elements["Γᵍ"]∪elements["Γᵗ"]
 # elements["Γᵉ"] = getElements(nodes,entities["Γᵉ"])
-elements["∂Ω"] = elements["Γ₁"]∪elements["Γ₂"]∪elements["Γ₃"]∪elements["Γ₄"]
+elements["∂Ω"] = elements["Γ₁"]∪elements["Γ₂"]∪elements["Γ₃"]∪elements["Γ₄"]∪elements["Γ₅"]
 
 # gmsh.finalize()
 
@@ -50,10 +51,10 @@ scatter!(ps,
 
 elements
 for elm in elements["Ω"]
-    # x = [x.x for x in elm.𝓒[[1,2,3,1]]]
-    # y = [x.y for x in elm.𝓒[[1,2,3,1]]]
-    x = [x.x for x in elm.𝓒[[1,2,3,4]]]
-    y = [x.y for x in elm.𝓒[[1,2,3,4]]]
+    x = [x.x for x in elm.𝓒[[1,2,3,1]]]
+    y = [x.y for x in elm.𝓒[[1,2,3,1]]]
+    # x = [x.x for x in elm.𝓒[[1,2,3,4]]]
+    # y = [x.y for x in elm.𝓒[[1,2,3,4]]]
 
     lines!(x,y, linewidth = 1.5, color = :black)
 end
@@ -67,7 +68,7 @@ for elm in elements["∂Ω"]
     lines!(x,y,linewidth = 1.5, color = :black)
 end
 
-save("./fig/cav_"*type*"_"*string(ndiv)*".png",f)
+save("./fig/cylinder_"*type*"_"*string(ndiv)*".png",f)
 # save("./fig/三角形节点网格/Tri3非均布_Rf_1.0_5"*string(ndiv)*".png",f, px_per_unit = 2.0)
 # save("./fig/三角形节点网格/Tri3_square_"*string(ndiv)*".png",f)
 # save("./fig/三角形节点网格/Tri6非均布_Rf_1.0_3"*string(ndiv)*".png",f, px_per_unit = 2.0)

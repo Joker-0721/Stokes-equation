@@ -2,7 +2,7 @@
 a = 0.5;
 b = 4.0;
 c = 1.5;
-n = 6;
+n = 2;
 
 Point(1) = {0.0, 0.0, 0.0};
 Point(2) = {  -a, 0.0, 0.0};
@@ -57,7 +57,7 @@ Line(28) = {20,17};
 Curve Loop(1) = {9,13,12,8};
 Curve Loop(2) = {10,1,11,-13};
 Curve Loop(3) = {-12,-15,6,7};
-Curve Loop(4) = {11,14,-3,-2};
+Curve Loop(4) = {2,3,-14,-11};
 Curve Loop(5) = {14,4,5,15};
 Curve Loop(6) = {23,-8,-25,-26};
 Curve Loop(7) = {22,26,-24,-16};
@@ -76,15 +76,16 @@ Plane Surface(8) = {8};
 Plane Surface(9) = {9};
 Plane Surface(10) = {10};
 Physical Surface("Ω") = {1,2,3,4,5,6,7,8,9,10};
-Physical Curve("Γ₁") = {1,2,5,6,16,17,20,21};
-Physical Curve("Γ₂") = {3,4,18,19};
-Physical Curve("Γ₃") = {9,10,22,23};
+Physical Curve("Γ₁") = {1,2,5,6,9,10,16,17,20,21,22,23};
+Physical Curve("Γ₂") = {3,4};
+Physical Curve("Γ₃") = {18,19};
 Transfinite Curve{1,3,6,8,9,10,11,12,13,16,18,21,22,23,24,25,26} = n+1;
 Transfinite Curve{2,4,5,7,14,15,17,19,20,27,28} = 2*n+1;
 Transfinite Surface{1,3,5,7,8,10};
 Transfinite Surface{2,4,6,9} Right;
 
-Mesh.Algorithm = 1;
+Mesh.ElementOrder = 1;
+Mesh.Algorithm = 8;
 // Mesh.MshFileVersion = 2;
 // Mesh.Renumber = 0;
 Mesh 2;
@@ -93,4 +94,4 @@ Mesh 2;
 // SetOrder 2;
 // Mesh.SecondOrderIncomplete = 1;
 
-Save "cylinder_tri_6.msh";
+Save "cylinder_tri_2.msh";
