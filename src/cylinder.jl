@@ -45,6 +45,9 @@ fᵘ = zeros(2*nᵘ)
 E = 1.0
 ν = 0.3
 μ = 0.01
+n₁₁(x,y,z,n₁,n₂) = n₁*n₁
+n₁₂(x,y,z,n₁,n₂) = n₁*n₂
+n₂₂(x,y,z,n₁,n₂) = n₂*n₂
 
 @timeit to "assembly" begin
     @timeit to "get elements" elements_u = getElements(nodes, entities["Ω"], integrationOrder)
@@ -53,7 +56,7 @@ E = 1.0
     prescribe!(elements_p, :E=>E, :ν=>ν)
     @timeit to "calculate shape functions" set∇𝝭!(elements_u)
     @timeit to "calculate shape functions" set𝝭!(elements_p)
-    𝑎 = ∫∫μ∇u∇vdxdy => elements_u
+    𝑎 = ∫∫μ∇u∇vdxdy=>elements_u
     𝑏 = ∫∫p∇udxdy=>(elements_p, elements_u)
     # 𝑐 = ∫qpdΩ=>elements_p
     𝑓 = ∫∫vᵢbᵢdxdy => elements_u
@@ -63,16 +66,13 @@ E = 1.0
 end
 
 @timeit to "calculate ∫vᵢgᵢds" begin
-    @timeit to "get elements" elements_1 = getElements(nodes, entities["Γ₁"], integrationOrder)
+    @timeit to "get elements" elements_1 = getElements(nodes, entities["Γ₁"], integrationOrder, normal=true)
     @timeit to "get elements" elements_2 = getElements(nodes, entities["Γ₂"], integrationOrder)
-    @timeit to "get elements" elements_3 = getElements(nodes, entities["Γ₃"], integrationOrder)
-    prescribe!(elements_1, :g₁=>0.0, :g₂=>0.0, :α=>1e14, :n₁₁=>1.0, :n₂₂=>1.0, :n₁₂=>0.0)
+    prescribe!(elements_1, :g₁=>0.0, :g₂=>0.0, :α=>1e14, :n₁₁=>n₁₁, :n₂₂=>n₂₂, :n₁₂=>n₁₂)
     prescribe!(elements_2, :g₁=>1.0, :g₂=>0.0, :α=>1e14, :n₁₁=>1.0, :n₂₂=>1.0, :n₁₂=>0.0)
-    prescribe!(elements_3, :g₁=>0.0, :g₂=>0.0, :α=>1e14, :n₁₁=>0.0, :n₂₂=>0.0, :n₁₂=>0.0)
     @timeit to "calculate shape functions" set𝝭!(elements_1)
     @timeit to "calculate shape functions" set𝝭!(elements_2)
-    @timeit to "calculate shape functions" set𝝭!(elements_3)
-    𝑎 = ∫vᵢgᵢds => elements_1∪elements_2∪elements_3
+    𝑎 = ∫vᵢgᵢds => elements_1∪elements_2
     @timeit to "assemble" 𝑎(kᵘᵘ, fᵘ)
 end
 
