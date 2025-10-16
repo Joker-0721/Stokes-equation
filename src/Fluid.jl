@@ -8,15 +8,20 @@ import ApproxOperator.Stokes:∫∫μ∇u∇vdxdy
 import ApproxOperator.Elasticity:∫∫p∇udxdy, ∫vᵢtᵢds, ∫∫vᵢbᵢdxdy, ∫vᵢgᵢds, ∫qpdΩ, L₂
 import Gmsh: gmsh
 
+𝑢₁(x,y,z) = 1 - y^2  # 解析解速度 x 分量
+𝑢₂(x,y,z) = 0.0      # 解析解速度 y 分量
+p(x,y,z) = -2 * μ * x # 解析解压力
+
 const to = TimerOutput()
 
 gmsh.initialize()
 type = "quad"
-ndiv_u = 20
+ndiv_u = 10
 ndiv_p = 4
 type_p = :(ReproducingKernel{:Linear2D,:□,:CubicSpline})
 integrationOrder = 2
-@timeit to "open msh file" gmsh.open("msh/cav_"*type*"_"*string(ndiv_p)*".msh")
+# @timeit to "open msh file" gmsh.open("msh/cav_"*type*"_"*string(ndiv_p)*".msh")
+@timeit to "open msh file" gmsh.open("msh/cav_quad_10.msh")
 @timeit to "get nodes_p" nodes_p = get𝑿ᵢ()  
 xᵖ = nodes_p.x
 yᵖ = nodes_p.y
@@ -30,7 +35,8 @@ s₃ = 1.5*s*ones(nᵖ)
 push!(nodes_p,:s₁=>s₁,:s₂=>s₂,:s₃=>s₃)
 
 
-@timeit to "open msh file" gmsh.open("msh/cav_"*type*"_"*string(ndiv_u)*".msh")
+# @timeit to "open msh file" gmsh.open("msh/cav_"*type*"_"*string(ndiv_u)*".msh")
+@timeit to "open msh file" gmsh.open("msh/cav_quad_4.msh")
 @timeit to "get entities" entities = getPhysicalGroups()
 @timeit to "get nodes" nodes = get𝑿ᵢ()
 nᵘ = length(nodes)
@@ -43,7 +49,7 @@ fᵘ = zeros(2*nᵘ)
 
 E = 1.0
 ν = 0.3
-μ = 0.1
+μ = 1.0
 
 @timeit to "assembly" begin
     @timeit to "get elements" elements_u = getElements(nodes, entities["Ω"], integrationOrder)
@@ -67,9 +73,9 @@ end
     @timeit to "get elements" elements_3 = getElements(nodes, entities["Γ₃"], integrationOrder)
     @timeit to "get elements" elements_4 = getElements(nodes, entities["Γ₄"], integrationOrder)
     prescribe!(elements_1, :g₁=>0.0, :g₂=>0.0, :α=>1e14, :n₁₁=>-1.0, :n₂₂=>1.0, :n₁₂=>0.0)
-    prescribe!(elements_2, :g₁=>0.0, :g₂=>0.0, :α=>1e14, :n₁₁=>1.0, :n₂₂=>0.0, :n₁₂=>0.0)
-    prescribe!(elements_3, :g₁=>1.0, :g₂=>0.0, :α=>1e14, :n₁₁=>1.0, :n₂₂=>1.0, :n₁₂=>0.0)
-    prescribe!(elements_4, :g₁=>0.0, :g₂=>0.0, :α=>1e14, :n₁₁=>1.0, :n₂₂=>0.0, :n₁₂=>0.0)
+    prescribe!(elements_2, :g₁=>0.0, :g₂=>0.0, :α=>1e14, :n₁₁=>0.0, :n₂₂=>0.0, :n₁₂=>0.0)
+    prescribe!(elements_3, :g₁=>0.0, :g₂=>0.0, :α=>1e14, :n₁₁=>1.0, :n₂₂=>1.0, :n₁₂=>0.0)
+    prescribe!(elements_4, :g₁=>0.0, :g₂=>0.0, :α=>1e14, :n₁₁=>0.0, :n₂₂=>0.0, :n₁₂=>0.0)
     @timeit to "calculate shape functions" set𝝭!(elements_1)
     @timeit to "calculate shape functions" set𝝭!(elements_2)
     @timeit to "calculate shape functions" set𝝭!(elements_3)
@@ -83,17 +89,17 @@ f = [fᵘ;fᵖ]
 
 @timeit to "solve" d = k\f
 
-push!(nodes, :d₁=>d[1:2:2*nᵘ], :d₂=>d[2:2:2*nᵘ])
-push!(nodes_p, :p=>d[2*nᵘ+1:end])
+push!(nodes, :d₁=>d[1:2:2*nᵘ], :d₂=>d[2:2:2*nᵘ], :d₃=>zeros(nᵘ))
+# push!(nodes_p, :p=>d[2*nᵘ+1:end])
 
-
-elements = getElements(nodes, entities["Ω"])
-# set∇𝝭!(elements)
-# L₂error = L₂(elements)
+elements = getElements(nodes, entities["Ω"],10)
+prescribe!(elements, :u₁=>𝑢₁, :u₂=>𝑢₂, :u₃=>0.0)
+set∇𝝭!(elements)
+L₂error = L₂(elements)
 gmsh.finalize()
 
 println(to)
-# println("L₂ error: ", L₂error)
+println("L₂ error: ", L₂error)
 
 pressure = zeros(nᵘ)
 u₁ = zeros(nᵘ)
@@ -132,9 +138,9 @@ end
 cells = [MeshCell(VTKCellTypes.VTK_QUAD,[xᵢ.𝐼 for xᵢ in elm.𝓒]) for elm in elements]
 # cells = [MeshCell(VTKCellTypes.VTK_TRIANGLE,[xᵢ.𝐼 for xᵢ in elm.𝓒]) for elm in elements]
 # cells = [MeshCell(VTKCellTypes.VTK_HEXAHEDRON,[xᵢ.𝐼 for xᵢ in elm.𝓒]) for elm in elements["Ωᵘ"]]
-vtk_grid("./vtk/cavity_"*type*"_"*string(ndiv_u)*"_"*string(nᵖ),points,cells) do vtk
+vtk_grid("./vtk/fluid_"*type*"_"*string(ndiv_u)*"_"*string(nᵖ),points,cells) do vtk
     vtk["u"] = (u₁,u₂,u₃)
     vtk["p"] = pressure
 end
 
-# println(nodes[5])
+# # println(nodes[5])
