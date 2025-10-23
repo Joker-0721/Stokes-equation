@@ -90,7 +90,7 @@ f = [fᵘ;fᵖ]
 @timeit to "solve" d = k\f
 
 push!(nodes, :d₁=>d[1:2:2*nᵘ], :d₂=>d[2:2:2*nᵘ], :d₃=>zeros(nᵘ))
-# push!(nodes_p, :p=>d[2*nᵘ+1:end])
+push!(nodes_p, :p=>d[2*nᵘ+1:end])
 
 elements = getElements(nodes, entities["Ω"],10)
 prescribe!(elements, :u₁=>𝑢₁, :u₂=>𝑢₂, :u₃=>0.0)
