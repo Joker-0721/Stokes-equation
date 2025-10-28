@@ -17,7 +17,7 @@ const to = TimerOutput()
 gmsh.initialize()
 type = "quad"
 ndiv_u = 10
-ndiv_p = 4
+ndiv_p = 2
 type_p = :(ReproducingKernel{:Linear2D,:□,:CubicSpline})
 integrationOrder = 2
 # @timeit to "open msh file" gmsh.open("msh/cav_"*type*"_"*string(ndiv_p)*".msh")
@@ -36,7 +36,7 @@ push!(nodes_p,:s₁=>s₁,:s₂=>s₂,:s₃=>s₃)
 
 
 # @timeit to "open msh file" gmsh.open("msh/cav_"*type*"_"*string(ndiv_u)*".msh")
-@timeit to "open msh file" gmsh.open("msh/cav_quad_4.msh")
+@timeit to "open msh file" gmsh.open("msh/cav_quad_2.msh")
 @timeit to "get entities" entities = getPhysicalGroups()
 @timeit to "get nodes" nodes = get𝑿ᵢ()
 nᵘ = length(nodes)

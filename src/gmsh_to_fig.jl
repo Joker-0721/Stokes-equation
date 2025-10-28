@@ -2,10 +2,10 @@ using ApproxOperator, GLMakie
 
 import Gmsh: gmsh
 
-ndiv = 2
-type = "tri"
+ndiv = 4
+type = "quad"
 gmsh.initialize()
-gmsh.open("./msh/cylinder_"*type*"_"*string(ndiv)*".msh")
+gmsh.open("./msh/cav_"*type*"_"*string(ndiv)*".msh")
 # gmsh.open("./msh/Non-uniform/RefineMesh_1.0/Tri6_"*string(ndiv)*".msh")
 # gmsh.open("./msh/Non-uniform/局部加密/Tri3_"*string(ndiv)*".msh")
 # gmsh.open("./msh/b=2/Tri3反向"*string(ndiv)*".msh")
