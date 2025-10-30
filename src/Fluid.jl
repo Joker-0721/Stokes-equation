@@ -20,8 +20,7 @@ ndiv_u = 10
 ndiv_p = 2
 type_p = :(ReproducingKernel{:Linear2D,:□,:CubicSpline})
 integrationOrder = 2
-# @timeit to "open msh file" gmsh.open("msh/cav_"*type*"_"*string(ndiv_p)*".msh")
-@timeit to "open msh file" gmsh.open("msh/cav_quad_10.msh")
+@timeit to "open msh file" gmsh.open("Stokes-equation/msh/cav_"*type*"_"*string(ndiv_p)*".msh")
 @timeit to "get nodes_p" nodes_p = get𝑿ᵢ()  
 xᵖ = nodes_p.x
 yᵖ = nodes_p.y
@@ -35,8 +34,7 @@ s₃ = 1.5*s*ones(nᵖ)
 push!(nodes_p,:s₁=>s₁,:s₂=>s₂,:s₃=>s₃)
 
 
-# @timeit to "open msh file" gmsh.open("msh/cav_"*type*"_"*string(ndiv_u)*".msh")
-@timeit to "open msh file" gmsh.open("msh/cav_quad_2.msh")
+@timeit to "open msh file" gmsh.open("Stokes-equation/msh/cav_"*type*"_"*string(ndiv_u)*".msh")
 @timeit to "get entities" entities = getPhysicalGroups()
 @timeit to "get nodes" nodes = get𝑿ᵢ()
 nᵘ = length(nodes)
@@ -138,7 +136,7 @@ end
 cells = [MeshCell(VTKCellTypes.VTK_QUAD,[xᵢ.𝐼 for xᵢ in elm.𝓒]) for elm in elements]
 # cells = [MeshCell(VTKCellTypes.VTK_TRIANGLE,[xᵢ.𝐼 for xᵢ in elm.𝓒]) for elm in elements]
 # cells = [MeshCell(VTKCellTypes.VTK_HEXAHEDRON,[xᵢ.𝐼 for xᵢ in elm.𝓒]) for elm in elements["Ωᵘ"]]
-vtk_grid("./vtk/fluid_"*type*"_"*string(ndiv_u)*"_"*string(nᵖ),points,cells) do vtk
+vtk_grid("Stokes-equation/vtk/fluid_"*type*"_"*string(ndiv_u)*"_"*string(nᵖ),points,cells) do vtk
     vtk["u"] = (u₁,u₂,u₃)
     vtk["p"] = pressure
 end
