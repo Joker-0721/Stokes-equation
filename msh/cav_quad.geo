@@ -1,5 +1,5 @@
 // 定义网格参数
-n = 4;  // 基础划分参数
+n = 64;  // 基础划分参数
 
 // 1. 定义几何实体（点→线→面）
 Point(1) = {0, 0, 0};
@@ -35,4 +35,4 @@ Geometry.AutoCoherence = 1;  // 自动同步几何实体
 
 // 5. 生成并保存网格
 Mesh 2;
-Save "cav_quad_4.msh";
+Save "cav_quad_64.msh";
