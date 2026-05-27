@@ -31,7 +31,7 @@ import Gmsh: gmsh
 # ====================== Section 2: 物理 & 数值参数 ============================
 
 # --- 物理参数 ---
-const μ  = 0.01     # 动力粘性系数
+const μ  = 0.0025   # 动力粘性系数 (Re=400)
 const ρ  = 1.0      # 密度
 const Re = ρ * 1.0 * 1.0 / μ   # 特征长度 L=1, 特征速度 U=1
 @printf("Reynolds number: Re = %.2f\n", Re)
@@ -44,13 +44,23 @@ const type_p     = :(ReproducingKernel{:Linear2D,:□,:CubicSpline})
 const intOrder   = 2        # 高斯积分阶数
 
 # --- 时间推进参数 ---
-const Δt         = 0.005    # 时间步长
-const nsteps     = 2000     # 总时间步数 (t_total = 10.0)
-const vtk_step   = 100       # 每隔多少步输出一次 VTK
+const Δt         = 0.02    # 时间步长
+const nsteps     = 1000    # 总时间步数 (t_total = 20.0)
+const vtk_interval = 3     # 均匀每 3 步 (0.06s) 输出，保证粒子动画丝滑
 
 # --- Newton 收敛参数 ---
 const maxNewton  = 20       # 最大迭代次数
 const newtonTol  = 1e-6     # 收敛容差 ||u_new-u_prev||/||u_new||
+
+# --- 平滑启动参数 ---
+const T_ramp    = 1.0       # 指数平滑启动时间窗口 (顶盖速度从 0 平滑过渡到 1)
+
+# --- 粒子追踪参数 ---
+const n_particles   = 5000      # 粒子数量
+const particle_xmin = 0.05      # 粒子初始化区域 x 范围
+const particle_xmax = 0.95
+const particle_ymin = 0.85      # 靠近顶盖释放
+const particle_ymax = 0.99
 
 # ======================== Section 3: 网格加载与预处理 ==========================
 
@@ -97,11 +107,11 @@ prescribe!(elements_u, :u₁   => 0.0, :u₂   => 0.0,
 const α_pen = 1e14
 # Γ₁ 左壁: u=(0,0)
 prescribe!(elements_Γ1, :g₁ => 0.0, :g₂ => 0.0, :α   => α_pen,
-                        :n₁₁ => -1.0, :n₂₂ => 1.0, :n₁₂ => 0.0)
+                        :n₁₁ => 1.0, :n₂₂ => 1.0, :n₁₂ => 0.0)
 # Γ₂ 右壁: u=(0,0)
 prescribe!(elements_Γ2, :g₁ => 0.0, :g₂ => 0.0, :α   => α_pen,
                         :n₁₁ => 1.0, :n₂₂ => 1.0, :n₁₂ => 0.0)
-# Γ₃ 顶盖: u=(1,0)
+# Γ₃ 顶盖: u=(0,0)，后续平滑函数会覆盖顶盖的 g₁ 值
 prescribe!(elements_Γ3, :g₁ => 1.0, :g₂ => 0.0, :α   => α_pen,
                         :n₁₁ => 1.0, :n₂₂ => 1.0, :n₁₂ => 0.0)
 # Γ₄ 底壁: u=(0,0)
@@ -151,6 +161,61 @@ op_pres_mat  = ∫∫p∇udxdy    => (elements_p, elements_u)  # K^up
 @info "Precomputing mass matrix M_t..."
 M_t = zeros(2*nᵘ, 2*nᵘ)
 op_mass_t(M_t)
+
+# =================== 粒子追踪：网格索引 + 插值函数 =====================
+
+include("particle_vtk.jl")  # 粒子 VTK 写入函数
+
+# 均匀 Q1 网格参数
+const nx_nodes_u = ndiv_u + 1    # 21
+const h_u        = 1.0 / ndiv_u  # 0.05
+
+# 构建网格索引映射：node_map[ix, iy] = node.𝐼 (全局节点编号)
+node_map = zeros(Int, nx_nodes_u, nx_nodes_u)
+for node in nodes
+    ix = Int(round(node.x / h_u)) + 1
+    iy = Int(round(node.y / h_u)) + 1
+    node_map[ix, iy] = node.𝐼
+end
+
+# 验证节点布局（打印左下角 3×3 节点）
+@info "Grid node layout check (bottom-left 3x3):"
+for iy in 1:3, ix in 1:3
+    I = node_map[ix, iy]
+    @printf("  node_map[%d,%d] = %3d  (x=%.2f, y=%.2f)\n", ix, iy, I,
+            nodes[I].x, nodes[I].y)
+end
+
+# 速度插值函数（Q1 双线性）
+function interpolate_velocity(xp, yp, d₁, d₂)
+    # 边界钳位
+    xp = clamp(xp, 0.0, 1.0)
+    yp = clamp(yp, 0.0, 1.0)
+    # 找到所在单元的左下角网格索引
+    ix = clamp(floor(Int, xp / h_u) + 1, 1, ndiv_u)
+    iy = clamp(floor(Int, yp / h_u) + 1, 1, ndiv_u)
+    # 单元局部坐标 [-1, 1]
+    ξ = 2.0 * (xp - (ix - 1) * h_u) / h_u - 1.0
+    η = 2.0 * (yp - (iy - 1) * h_u) / h_u - 1.0
+    # Q1 形函数
+    N_bl = 0.25 * (1 - ξ) * (1 - η)
+    N_br = 0.25 * (1 + ξ) * (1 - η)
+    N_tr = 0.25 * (1 + ξ) * (1 + η)
+    N_tl = 0.25 * (1 - ξ) * (1 + η)
+    # 四个角节点的全局索引
+    i_bl = node_map[ix, iy]
+    i_br = node_map[ix + 1, iy]
+    i_tr = node_map[ix + 1, iy + 1]
+    i_tl = node_map[ix, iy + 1]
+    # 插值
+    u = N_bl * d₁[i_bl] + N_br * d₁[i_br] + N_tr * d₁[i_tr] + N_tl * d₁[i_tl]
+    v = N_bl * d₂[i_bl] + N_br * d₂[i_br] + N_tr * d₂[i_tr] + N_tl * d₂[i_tl]
+    return u, v
+end
+
+# 粒子初始化（靠近顶盖随机撒点）
+particles_x = rand(n_particles) .* (particle_xmax - particle_xmin) .+ particle_xmin
+particles_y = rand(n_particles) .* (particle_ymax - particle_ymin) .+ particle_ymin
 
 # ===================== Section 6: Newton 非线性求解器 =========================
 
@@ -239,8 +304,24 @@ end
 
 for step in 1:nsteps
     global d₁, d₂, p_vec, d₁_old, d₂_old
+    global particles_x, particles_y
 
-    @printf("\n--- Step %3d / %d (t = %.3f) ---\n", step, nsteps, step * Δt)
+    t = step * Δt
+    @printf("\n--- Step %3d / %d (t = %.3f) ---\n", step, nsteps, t)
+
+
+    # ---- 7.0 指数型平滑启动 (lid velocity ramp) ----
+    if t < T_ramp
+        g₁_lid = 1.0 - exp(-3.0 * t / T_ramp)
+    else
+        g₁_lid = 1.0
+    end
+    # 更新顶盖边界条件的 g₁ 值，并重装 f_pen (K_pen 不依赖 g₁)
+    prescribe!(elements_Γ3, :g₁ => g₁_lid, :g₂ => 0.0, :α => α_pen,
+                            :n₁₁ => 1.0, :n₂₂ => 1.0, :n₁₂ => 0.0)
+    fill!(K_pen, 0.0)
+    fill!(f_pen, 0.0)
+    bc_op(K_pen, f_pen)
 
     # ---- 7.1 Picard 非线性求解 ----
     converged, iters, rel_err = picard_step!(
@@ -258,13 +339,20 @@ for step in 1:nsteps
         @printf("  Converged in %d iters, rel_err = %.3e\n", iters, rel_err)
     end
 
+    # ---- 粒子平流（用收敛后的速度场推进一步）----
+    for p in 1:n_particles
+        u_p, v_p = interpolate_velocity(particles_x[p], particles_y[p], d₁, d₂)
+        particles_x[p] = clamp(particles_x[p] + u_p * Δt, 0.0, 1.0)
+        particles_y[p] = clamp(particles_y[p] + v_p * Δt, 0.0, 1.0)
+    end
+
     # ---- 7.2 时间步更新: u_old ← u ----
     @. d₁_old = d₁
     @. d₂_old = d₂
     push!(nodes, :d₁_old => d₁_old, :d₂_old => d₂_old)
 
-    # ---- 7.3 VTK 输出 ----
-    if step % vtk_step == 0 || step == nsteps
+    # ---- 7.3 VTK 输出（均匀密集，保证粒子动画丝滑）----
+    if step % vtk_interval == 0 || step == nsteps
         @info "Writing VTK for step $step..."
 
         # 确保输出文件夹存在
@@ -322,6 +410,17 @@ for step in 1:nsteps
             vtk["u"] = (u₁_vtk, u₂_vtk, u₃_vtk)
             vtk["p"] = pressure
         end
+
+                # ---- 粒子 VTK 输出 ----
+        p_filename = "./vtk/cavity-Convection/particles_step" * string(step) * ".vtu"
+        
+        # 计算每个粒子的速度大小
+        p_speed = zeros(n_particles)
+        for p in 1:n_particles
+            u_p, v_p = interpolate_velocity(particles_x[p], particles_y[p], d₁, d₂)
+            p_speed[p] = sqrt(u_p^2 + v_p^2)
+        end
+        write_particles_vtk(p_filename, particles_x, particles_y, p_speed)
     end
 end
 
@@ -337,10 +436,9 @@ open(pvd_path, "w") do io
     write(io, "<VTKFile type=\"Collection\" version=\"0.1\" byte_order=\"LittleEndian\">\n")
     write(io, "  <Collection>\n")
     for step in 1:nsteps
-        if step % vtk_step == 0 || step == nsteps
-            t = step * Δt
-            fname = "cavity_$(type)_$(ndiv_u)_$(nᵖ)_step$(step).vtu"
-            write(io, "    <DataSet timestep=\"$(t)\" file=\"$(fname)\"/>\n")
+        if step % vtk_interval == 0 || step == nsteps
+            fname2 = "cavity_$(type)_$(ndiv_u)_$(nᵖ)_step$(step).vtu"
+            write(io, "    <DataSet timestep=\"$(step * Δt)\" file=\"$(fname2)\"/>\n")
         end
     end
     write(io, "  </Collection>\n")
@@ -348,3 +446,23 @@ open(pvd_path, "w") do io
 end
 
 @info "Open ./vtk/cavity-Convection/cavity_series.pvd in ParaView for time-series animation"
+
+# ========================= 写粒子 PVD 串联文件 ==================================
+
+@info "Writing particles .pvd collection file..."
+pvd_particles_path = "./vtk/cavity-Convection/particles_series.pvd"
+open(pvd_particles_path, "w") do io
+    write(io, "<?xml version=\"1.0\"?>\n")
+    write(io, "<VTKFile type=\"Collection\" version=\"0.1\" byte_order=\"LittleEndian\">\n")
+    write(io, "  <Collection>\n")
+    for step in 1:nsteps
+        if step % vtk_interval == 0 || step == nsteps
+            fname2 = "particles_step$(step).vtu"
+            write(io, "    <DataSet timestep=\"$(step * Δt)\" file=\"$(fname2)\"/>\n")
+        end
+    end
+    write(io, "  </Collection>\n")
+    write(io, "</VTKFile>\n")
+end
+
+@info "Open ./vtk/cavity-Convection/particles_series.pvd in ParaView for particles"
