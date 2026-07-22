@@ -20,7 +20,7 @@ import Gmsh: gmsh
 # ====================== Section 2: 物理 & 数值参数 ============================
 
 # --- 物理参数 ---
-const μ  = 0.0025        # 动力粘性系数 (Re=400)
+const μ  = 0.01        # 动力粘性系数 (Re=400)
 const ρ  = 1.0          # 密度
 const U₀ = 1.0          # 来流特征速度
 const D  = 1.0          # 特征长度
@@ -28,8 +28,8 @@ const Re = ρ * U₀ * D / μ
 @printf("Reynolds number: Re = %.2f\n", Re)
 
 # --- 网格配置文件路径 ---
-const mesh_file_u   = "msh/cylinder/cylinder_tri_0.2-1.msh"  
-const mesh_file_p   = "msh/cylinder/cylinder_tri_0.6-2.0.msh"  
+const mesh_file_u   = "msh/cylinder/cylinder_tri_0.25-0.8.msh"  
+const mesh_file_p   = "msh/cylinder/cylinder_tri_0.5-1.6.msh"  
 
 const mesh_type     = "tri"       
 const intOrder      = 2            # 高斯积分阶数
@@ -39,7 +39,7 @@ const TypeP  = eval(type_p)
 
 # --- VTK 输出配置 ---
 const outdir    = "./vtk/cylinder-flow"
-const case_name = "cylinder_tri_0.6-2.0-newton"
+const case_name = "cylinder_tri_0.5-1.6-newton"
 
 # --- 边界条件物理组名映射 ---
 const INLET_GROUP  = "Γ₁"          # 入口物理组名
@@ -48,12 +48,13 @@ const WALL_GROUPS  = ["Γ₃", "Γ₄", "Γ₅"] # 固壁物理组名列表 (顶
 
 # --- 时间推进与非线性求解参数 ---
 const Δt           = 0.005      # 推荐减小至 0.01，配合 Newton 格式更稳定捕捉非定常涡街
-const nsteps       = 600     
-const vtk_interval = 10          # VTK 输出间隔步数       
+const nsteps       = 4000     
+const vtk_interval = 50          # VTK 输出间隔步数       
 
 const maxNewton    = 20       
 const newtonTol    = 1e-5     
-const T_ramp       = 1.0       # 指数平滑启动时间窗口
+const T_ramp       = 1.0       # 三次光滑阶跃启动时间窗口
+const H_half       = 5.0       # 通道半高 (入口 y ∈ [-5, 5])
 
 # ======================== Section 3: 网格加载与预处理 ==========================
 
@@ -61,9 +62,10 @@ const T_ramp       = 1.0       # 指数平滑启动时间窗口
 # 根据局部节点最近邻距离自动计算 RKPM 支撑域 s₁,s₂,s₃
 #   k_nearest: 最近邻个数 (典型 4~8)
 #   α: 支撑域缩放因子 (典型 1.5~3.0，= 支撑域半径 / 局部节点间距)
-function set_adaptive_support!(nodes_p, sp::ApproxOperator.RegularGrid; k_nearest=6, α=2.5)
+function set_adaptive_support!(nodes_p, sp::ApproxOperator.RegularGrid; k_nearest=12, α=2.5)
     n = length(nodes_p)
-    h_local = zeros(n)
+    h_local    = zeros(n)
+    n_support  = zeros(Int, n)    # 每个节点支撑域半径内覆盖的邻点数
     for (i, node) in enumerate(nodes_p)
         x, y, z = node.x, node.y, node.z
         candidates = sp(x, y, z)
@@ -71,18 +73,25 @@ function set_adaptive_support!(nodes_p, sp::ApproxOperator.RegularGrid; k_neares
         for j in candidates
             j == i && continue
             nbr = nodes_p[j]
-            d = sqrt((x - nbr.x)^2 + (y - nbr.y)^2 + (z - nbr.z)^2)
-            push!(dists, d)
+            push!(dists, sqrt((x - nbr.x)^2 + (y - nbr.y)^2 + (z - nbr.z)^2))
         end
         sort!(dists)
         k = min(k_nearest, length(dists))
-        h_local[i] = sum(dists[1:k]) / k
+        if k == 0
+            h_local[i] = 0.01; n_support[i] = 0; continue
+        end
+        h_local[i] = dists[k]
+        r_support = α * h_local[i]
+        n_support[i] = count(d -> d <= r_support, dists)
     end
-    push!(nodes_p, :s₁ => α .* h_local,
-                   :s₂ => α .* h_local,
-                   :s₃ => α .* h_local)
+    push!(nodes_p, :s₁     => α .* h_local,
+                   :s₂     => α .* h_local,
+                   :s₃     => α .* h_local,
+                   ) 
+
     @info "Adaptive RKPM support: h_min=$(minimum(h_local)) h_max=$(maximum(h_local)) h_avg=$(mean(h_local)) α=$α"
-end
+end   
+
 
 gmsh.initialize()
 
@@ -95,7 +104,7 @@ xᵖ, yᵖ, zᵖ = nodes_p.x, nodes_p.y, nodes_p.z
 nᵖ = length(nodes_p)
 
 sp = RegularGrid(xᵖ, yᵖ, zᵖ; n=8, γ=4)
-set_adaptive_support!(nodes_p, sp; k_nearest=6, α=2.5)
+set_adaptive_support!(nodes_p, sp; k_nearest=12, α=2.5)
 
 # ---- 3.2 速度网格 (FEM, 细网格) ----
 @info "Loading velocity mesh..."
@@ -125,7 +134,7 @@ prescribe!(elements_u, :u₁   => 0.0, :u₂   => 0.0,
                        :∂u₂∂x => 0.0, :∂u₂∂y => 0.0)
 
 # ---- 3.5 边界条件 (罚函数法) ----
-const α_pen = 1e8
+const α_pen = 1e10
 
 prescribe!(elements_inlet, :g₁ => U₀, :g₂ => 0.0, :α   => α_pen,
                            :n₁₁ => 1.0, :n₂₂ => 1.0, :n₁₂ => 0.0)
@@ -334,9 +343,10 @@ for step in 1:nsteps
     t = step * Δt
     @printf("\n--- Step %3d / %d (t = %.3f) ---\n", step, nsteps, t)
 
-    # ---- 7.0 指数型平滑启动 (inflow velocity ramp) ----
+    # ---- 7.0 三次光滑阶跃启动 (C¹ 连续, 消除压力尖峰) ----
     if t < T_ramp
-        g₁_inflow = U₀ * (1.0 - exp(-3.0 * t / T_ramp))
+        τ = t / T_ramp
+        g₁_inflow = U₀ * τ^2 * (3.0 - 2.0τ)   # g(0)=0, g(T)=U₀, g'(0)=g'(T)=0
     else
         g₁_inflow = U₀
     end
