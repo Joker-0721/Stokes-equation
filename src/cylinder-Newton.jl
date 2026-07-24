@@ -20,7 +20,7 @@ import Gmsh: gmsh
 # ====================== Section 2: 物理 & 数值参数 ============================
 
 # --- 物理参数 ---
-const μ  = 0.01        # 动力粘性系数 (Re=400)
+const μ  = 0.01        # 动力粘性系数 
 const ρ  = 1.0          # 密度
 const U₀ = 1.0          # 来流特征速度
 const D  = 1.0          # 特征长度
@@ -48,7 +48,7 @@ const WALL_GROUPS  = ["Γ₃", "Γ₄", "Γ₅"] # 固壁物理组名列表 (顶
 
 # --- 时间推进与非线性求解参数 ---
 const Δt           = 0.005      # 推荐减小至 0.01，配合 Newton 格式更稳定捕捉非定常涡街
-const nsteps       = 4000     
+const nsteps       = 6000     
 const vtk_interval = 50          # VTK 输出间隔步数       
 
 const maxNewton    = 20       
@@ -343,16 +343,28 @@ for step in 1:nsteps
     t = step * Δt
     @printf("\n--- Step %3d / %d (t = %.3f) ---\n", step, nsteps, t)
 
-    # ---- 7.0 三次光滑阶跃启动 (C¹ 连续, 消除压力尖峰) ----
+    # ---- 7.0 时空耦合入口剖面: 时间斜坡 × 空间抛物型 (消除角点奇异性) ----
     if t < T_ramp
         τ = t / T_ramp
-        g₁_inflow = U₀ * τ^2 * (3.0 - 2.0τ)   # g(0)=0, g(T)=U₀, g'(0)=g'(T)=0
+        ramp_factor = τ^2 * (3.0 - 2.0τ)
     else
-        g₁_inflow = U₀
+        ramp_factor = 1.0
     end
-    # 更新来流边界条件的 g₁ 值，并重装 f_pen (K_pen 不依赖 g₁)
-    prescribe!(elements_inlet, :g₁ => g₁_inflow, :g₂ => 0.0, :α   => α_pen,
+
+    # 抛物型空间分布: u(y) = U₀ * (1 - (y/H)^2), 壁面处 u(±H)=0
+    # 先统一初始化入口数据结构（α, n 等不随 y 变化）
+    prescribe!(elements_inlet, :g₁ => 0.0, :g₂ => 0.0, :α   => α_pen,
                                :n₁₁ => 1.0, :n₂₂ => 1.0, :n₁₂ => 0.0)
+
+    # 逐积分点写入 y 相关的 g₁ 值
+    for elm in elements_inlet
+        for ξ in elm.𝓖
+            y = ξ.y
+            spatial_u = U₀ * (1.0 - (y / H_half)^2)
+            ξ.g₁ = spatial_u * ramp_factor
+        end
+    end
+
     fill!(K_pen, 0.0)
     fill!(f_pen, 0.0)
     bc_op(K_pen, f_pen)
